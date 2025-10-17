@@ -343,6 +343,11 @@ const LoginPage = ({ role }) => {
                                 <MockLink to="/Adminregister">Sign up</MockLink>
                             </div>
                         )}
+                        {/* Sign Link */}
+                            <div style={{ marginTop: '15px', display: 'flex', fontSize: '0.9rem', justifyContent: 'center' }}>
+                                <span style={{ color: '#757575' }}>Don't have an account?</span>
+                                <MockLink to="/signup">Signup</MockLink>
+                            </div>
                     </form>
                 </div>
             </div>
