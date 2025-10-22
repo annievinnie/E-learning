@@ -1,4 +1,31 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import API from '../api';
+
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.post("/auth/login", { email, password });
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", res.data.user.role);
+      localStorage.setItem("name", res.data.user.name);
+
+      if (res.data.user.role === "teacher") navigate("/teacher");
+      else if (res.data.user.role === "student") navigate("/student");
+      else if (res.data.user.role === "admin") navigate("/admin");
+      else navigate("/courses");
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed");
+    }
+  };
+
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // A simple internal style object for a clean look, mimicking a basic CSS file
