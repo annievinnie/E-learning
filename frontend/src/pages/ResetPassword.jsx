@@ -1,7 +1,20 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 
-// A simple internal style object for a clean look, mirroring the LoginPage styles
+// API function for reset password
+const resetPasswordAPI = async (token, password) => {
+    const response = await fetch('http://localhost:5000/api/reset-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token, password }),
+    });
+    
+    const data = await response.json();
+    return { success: response.ok, data };
+};
+
 const styles = {
   container: {
     display: 'flex',
@@ -21,7 +34,7 @@ const styles = {
   },
   backgroundSection: {
     flex: 1.5,
-    backgroundColor: '#3f51b5', // Simple dark blue background
+    backgroundColor: '#3f51b5',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -78,59 +91,75 @@ const styles = {
     display: 'inline-block',
     marginRight: '8px',
   },
-  // Keyframes for the simple loader animation (Note: inline styles don't easily support keyframes, 
-  // but we'll include the style object property for conceptual completeness)
-  '@keyframes spin': {
-    '0%': { transform: 'rotate(0deg)' },
-    '100%': { transform: 'rotate(360deg)' },
-  },
 };
 
-// API function for forgot password
-const forgotPasswordAPI = async (email) => {
-    const response = await fetch('http://localhost:5000/api/forgot-password', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-    });
-    
-    const data = await response.json();
-    return { success: response.ok, data };
-};
-
-// ------------------ ForgetPasswordPage Component ------------------
-
-const ForgetPasswordPage = ({ role = 'User' }) => {
-    // We only need the loader and email state for this simple component
+const ResetPasswordPage = () => {
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [loader, setLoader] = useState(false);
-    const [emailError, setEmailError] = useState(false);
+    const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const [message, setMessage] = useState('');
     const [success, setSuccess] = useState(false);
+    const [token, setToken] = useState('');
+
+    useEffect(() => {
+        const tokenFromUrl = searchParams.get('token');
+        if (!tokenFromUrl) {
+            setMessage('Invalid reset link. Please request a new password reset.');
+            setSuccess(false);
+        } else {
+            setToken(tokenFromUrl);
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         setMessage('');
         setSuccess(false);
+        setPasswordError('');
+        setConfirmPasswordError('');
         setLoader(true);
 
-        const email = event.target.email.value;
+        const password = event.target.password.value;
+        const confirmPassword = event.target.confirmPassword.value;
 
-        if (!email) {
-            setEmailError(true);
+        // Validation
+        if (!password) {
+            setPasswordError('Password is required');
             setLoader(false);
             return;
         }
-        setEmailError(false);
+
+        if (password.length < 6) {
+            setPasswordError('Password must be at least 6 characters long');
+            setLoader(false);
+            return;
+        }
+
+        if (!confirmPassword) {
+            setConfirmPasswordError('Please confirm your password');
+            setLoader(false);
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setConfirmPasswordError('Passwords do not match');
+            setLoader(false);
+            return;
+        }
 
         try {
-            const result = await forgotPasswordAPI(email);
+            const result = await resetPasswordAPI(token, password);
             setLoader(false);
             
             if (result.success) {
                 setMessage(result.data.message);
                 setSuccess(true);
+                // Redirect to login after 3 seconds
+                setTimeout(() => {
+                    navigate('/');
+                }, 3000);
             } else {
                 setMessage(result.data.message || 'Something went wrong. Please try again.');
                 setSuccess(false);
@@ -143,7 +172,8 @@ const ForgetPasswordPage = ({ role = 'User' }) => {
     };
 
     const handleInputChange = () => {
-        setEmailError(false);
+        setPasswordError('');
+        setConfirmPasswordError('');
         setMessage('');
     };
 
@@ -153,22 +183,33 @@ const ForgetPasswordPage = ({ role = 'User' }) => {
             <div style={styles.formSection}>
                 <div style={styles.formBox}>
                     <h2 style={{ color: '#1a237e', marginBottom: '8px' }}>
-                        Forgot Password
+                        Reset Password
                     </h2>
                     <p style={{ color: '#757575', marginBottom: '20px', lineHeight: '1.4' }}>
-                        Enter your {role}'s email address and we'll send you a link to reset your password.
+                        Enter your new password below.
                     </p>
 
                     <form onSubmit={handleSubmit} noValidate>
                         <label>
-                            {emailError && <span style={styles.errorText}>Email is required</span>}
+                            {passwordError && <span style={styles.errorText}>{passwordError}</span>}
                             <input
-                                type="email"
-                                name="email"
-                                placeholder="Enter your email"
-                                style={{...styles.input, borderColor: emailError ? 'red' : '#ccc'}}
+                                type="password"
+                                name="password"
+                                placeholder="Enter new password"
+                                style={{...styles.input, borderColor: passwordError ? 'red' : '#ccc'}}
                                 onChange={handleInputChange}
                                 autoFocus
+                            />
+                        </label>
+
+                        <label>
+                            {confirmPasswordError && <span style={styles.errorText}>{confirmPasswordError}</span>}
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                placeholder="Confirm new password"
+                                style={{...styles.input, borderColor: confirmPasswordError ? 'red' : '#ccc'}}
+                                onChange={handleInputChange}
                             />
                         </label>
                         
@@ -186,15 +227,15 @@ const ForgetPasswordPage = ({ role = 'User' }) => {
                         <button 
                             type="submit" 
                             style={styles.button}
-                            disabled={loader}
+                            disabled={loader || !token}
                         >
                             {loader ? (
                                 <>
                                     <span style={styles.loader}></span>
-                                    Sending Link...
+                                    Resetting Password...
                                 </>
                             ) : (
-                                'Send Reset Link'
+                                'Reset Password'
                             )}
                         </button>
                         
@@ -208,7 +249,7 @@ const ForgetPasswordPage = ({ role = 'User' }) => {
                 </div>
             </div>
 
-            {/* Background Image Section (Simplified) */}
+            {/* Background Image Section */}
             <div style={styles.backgroundSection}>
                 Password Reset
             </div>
@@ -216,4 +257,4 @@ const ForgetPasswordPage = ({ role = 'User' }) => {
     );
 };
 
-export default ForgetPasswordPage;
+export default ResetPasswordPage;
