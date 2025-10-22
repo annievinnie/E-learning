@@ -1,5 +1,7 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import User from "../models/User.js";
+import getCourierClient from "../config/courier.js";
 
 export const signupUser = async (req, res) => {
   try {
@@ -27,6 +29,113 @@ export const signupUser = async (req, res) => {
     res.status(201).json({ message: "Account created successfully!" });
   } catch (error) {
     console.error("Signup error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // For security, don't reveal if email exists or not
+      return res.status(200).json({ 
+        message: "If an account with that email exists, we've sent a password reset link." 
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Save reset token to user
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetPasswordExpires;
+    await user.save();
+
+    // Send email using Courier
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    
+    try {
+      // Check if Courier is configured
+      if (!process.env.COURIER_AUTH_TOKEN) {
+        console.log(`Password reset link for ${user.email}: ${resetUrl}`);
+        res.status(200).json({ 
+          message: "Password reset link generated. Check server logs for the link (Courier not configured)." 
+        });
+        return;
+      }
+
+      const courier = getCourierClient();
+      await courier.send({
+        message: {
+          to: {
+            email: user.email,
+          },
+          template: process.env.COURIER_RESET_PASSWORD_TEMPLATE_ID,
+          data: {
+            userName: user.fullName,
+            resetUrl: resetUrl,
+          },
+        },
+      });
+
+      res.status(200).json({ 
+        message: "If an account with that email exists, we've sent a password reset link." 
+      });
+    } catch (emailError) {
+      console.error("Email sending error:", emailError);
+      // Clear the reset token if email fails
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      
+      res.status(500).json({ message: "Failed to send reset email. Please try again." });
+    }
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: "Token and password are required." });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long." });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token." });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update user password and clear reset token
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully." });
+  } catch (error) {
+    console.error("Reset password error:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
