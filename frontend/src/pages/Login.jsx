@@ -1,12 +1,6 @@
-<<<<<<< Updated upstream
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../api";
-=======
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
->>>>>>> Stashed changes
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -31,22 +25,110 @@ export default function Login() {
     }
   };
 
-<<<<<<< Updated upstream
-  return (
-    <div className="container d-flex flex-column align-items-center mt-5">
-      <h2 className="mb-3">Login</h2>
-      {error && <p className="text-danger">{error}</p>}
-      <form onSubmit={handleLogin} className="w-50">
-        <input type="email" className="form-control mb-2" placeholder="Email"
-          value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" className="form-control mb-2" placeholder="Password"
-          value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit" className="btn btn-primary w-100">Login</button>
-      </form>
-    </div>
-  );
-}
-=======
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+// A simple internal style object for a clean look, mimicking a basic CSS file
+const styles = {
+  container: {
+    display: 'flex',
+    height: '100vh',
+    fontFamily: 'Arial, sans-serif',
+  },
+  formSection: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px',
+    backgroundColor: '#fff',
+    minWidth: '350px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+  },
+  backgroundSection: {
+    flex: 1.5,
+    backgroundColor: '#3f51b5', // Simple dark blue background
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '2rem',
+    fontWeight: 'bold',
+  },
+  formBox: {
+    width: '100%',
+    maxWidth: '360px',
+    marginTop: '20px',
+  },
+  input: {
+    width: '100%',
+    padding: '12px',
+    margin: '10px 0',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    boxSizing: 'border-box',
+  },
+  button: {
+    width: '100%',
+    padding: '12px',
+    marginTop: '20px',
+    marginBottom: '10px',
+    backgroundColor: '#3f51b5',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    fontWeight: 'bold',
+    transition: 'background-color 0.3s',
+  },
+  buttonHover: {
+    backgroundColor: '#303f9f',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: '0.85rem',
+    marginBottom: '5px',
+    display: 'block',
+  },
+  link: {
+    color: '#3f51b5',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    marginLeft: '10px',
+  },
+  loader: {
+    border: '4px solid rgba(255, 255, 255, 0.3)',
+    borderTop: '4px solid #fff',
+    borderRadius: '50%',
+    width: '16px',
+    height: '16px',
+    animation: 'spin 1s linear infinite',
+    display: 'inline-block',
+    marginRight: '8px',
+  },
+  // Keyframes for the simple loader animation
+  '@keyframes spin': {
+    '0%': { transform: 'rotate(0deg)' },
+    '100%': { transform: 'rotate(360deg)' },
+  },
+  popup: {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    backgroundColor: '#f44336',
+    color: 'white',
+    padding: '15px',
+    borderRadius: '5px',
+    zIndex: 1000,
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+  }
+};
+
+
+// ------------------ Helper Components (Mimicking deleted ones) ------------------
+
 // Mock Link/StyledLink component
 const MockLink = ({ to, children }) => (
     <a href={to || '#'} style={styles.link}>{children}</a>
@@ -75,7 +157,7 @@ const MockPopup = ({ message, showPopup, setShowPopup }) => {
 // ------------------ LoginPage Component ------------------
 
 const LoginPage = ({ role }) => {
-    const navigate = useNavigate();
+    // We'll mock the Redux state and dispatch here since you're stripping dependencies
     const [loginState, setLoginState] = useState({
         status: null,
         currentUser: null,
@@ -83,31 +165,24 @@ const LoginPage = ({ role }) => {
         currentRole: null,
     });
     
-    // Real API call for login
-    const loginUser = async (fields, userRole) => {
-        try {
-            const response = await API.post('/login', fields);
-            const { token, user } = response.data;
-            
-            // Store token in localStorage
-            localStorage.setItem('token', token);
-            
-            // Dispatch custom event to notify navbar of auth state change
-            window.dispatchEvent(new CustomEvent('authStateChanged'));
-            
-            setLoginState({
-                status: 'success',
-                currentUser: user,
-                currentRole: user.role,
-            });
-        } catch (error) {
-            console.error('Login error:', error);
-            setLoginState({
-                status: 'failed',
-                response: error.response?.data?.message || 'Login failed. Please try again.',
-                currentRole: null,
-            });
-        }
+    // Dispatch/API Mock
+    const mockLoginUser = (fields, role) => {
+        // Simulate a network delay
+        setTimeout(() => {
+            if (fields.password === '123') { // Simple success condition
+                setLoginState({
+                    status: 'success',
+                    currentUser: { id: 1, name: role },
+                    currentRole: role,
+                });
+            } else {
+                setLoginState({
+                    status: 'failed',
+                    response: 'Invalid credentials. Try "123" for password.',
+                    currentRole: null,
+                });
+            }
+        }, 1500);
     };
 
     // Original state variables
@@ -120,15 +195,10 @@ const LoginPage = ({ role }) => {
     const [rollNumberError, setRollNumberError] = useState(false);
     const [studentNameError, setStudentNameError] = useState(false);
 
-    // Navigation function
-    const navigateToDashboard = (userRole) => {
-        if (userRole === 'admin') {
-            navigate('/admin/dashboard');
-        } else if (userRole === 'student') {
-            navigate('/student/dashboard');
-        } else if (userRole === 'teacher') {
-            navigate('/teacher/dashboard');
-        }
+    // Mock Navigation function
+    const mockNavigate = (path) => {
+        console.log(`Navigating to: ${path}`);
+        // In a real app, this would change the browser URL
     };
 
     const handleSubmit = (event) => {
@@ -149,7 +219,7 @@ const LoginPage = ({ role }) => {
             
             if (hasError) return setLoader(false);
 
-            loginUser({ email: rollNum, password }, role);
+            mockLoginUser({ rollNum, studentName, password }, role);
         } else {
             const email = form.email.value;
             const password = form.password.value;
@@ -160,7 +230,7 @@ const LoginPage = ({ role }) => {
 
             if (hasError) return setLoader(false);
 
-            loginUser({ email, password }, role);
+            mockLoginUser({ email, password }, role);
         }
     };
 
@@ -175,7 +245,13 @@ const LoginPage = ({ role }) => {
     // Effect to handle login status and navigation
     useEffect(() => {
         if (loginState.status === 'success' && loginState.currentUser !== null) {
-            navigateToDashboard(loginState.currentRole);
+            if (loginState.currentRole === 'Admin') {
+                mockNavigate('/Admin/dashboard');
+            } else if (loginState.currentRole === 'Student') {
+                mockNavigate('/Student/dashboard');
+            } else if (loginState.currentRole === 'Teacher') {
+                mockNavigate('/Teacher/dashboard');
+            }
             setLoader(false);
         } else if (loginState.status === 'failed') {
             setMessage(loginState.response);
@@ -194,7 +270,7 @@ const LoginPage = ({ role }) => {
             <div style={styles.formSection}>
                 <div style={styles.formBox}>
                     <h2 style={{ color: '#1a237e', marginBottom: '8px' }}>
-                        Login
+                        {role} Login
                     </h2>
                     <p style={{ color: '#757575', marginBottom: '20px' }}>
                         Welcome back! Please enter your details.
@@ -270,7 +346,7 @@ const LoginPage = ({ role }) => {
                                 <input type="checkbox" name="remember" style={{ marginRight: '5px' }} />
                                 Remember me
                             </label>
-                            <MockLink to="#">Forgot password?</MockLink>
+                            <Link to="/forgot-password" style={styles.link}>Forgot password?</Link>
                         </div>
 
                         <button 
@@ -288,17 +364,17 @@ const LoginPage = ({ role }) => {
                             )}
                         </button>
                         
-                        {/* Sign up link for admin
+                        {/* Sign up link for admin */}
                         {role === 'Admin' && (
                             <div style={{ marginTop: '15px', display: 'flex', fontSize: '0.9rem' }}>
                                 <span style={{ color: '#757575' }}>Don't have an account?</span>
                                 <MockLink to="/Adminregister">Sign up</MockLink>
                             </div>
-                        )} */}
+                        )}
                         {/* Sign Link */}
                             <div style={{ marginTop: '15px', display: 'flex', fontSize: '0.9rem', justifyContent: 'center' }}>
                                 <span style={{ color: '#757575' }}>Don't have an account?</span>
-                                <MockLink to="/signup">Signup</MockLink>
+                                <Link to="/signup" style={styles.link}>Signup</Link>
                             </div>
                     </form>
                 </div>
@@ -320,4 +396,3 @@ const LoginPage = ({ role }) => {
 };
 
 export default LoginPage;
->>>>>>> Stashed changes
