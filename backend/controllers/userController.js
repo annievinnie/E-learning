@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import getCourierClient from "../config/courier.js";
 
@@ -29,6 +30,51 @@ export const signupUser = async (req, res) => {
     res.status(201).json({ message: "Account created successfully!" });
   } catch (error) {
     console.error("Signup error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user._id, 
+        email: user.email, 
+        role: user.role 
+      },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
+    );
+
+    res.status(200).json({
+      message: "Login successful!",
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
@@ -136,6 +182,32 @@ export const resetPassword = async (req, res) => {
     res.status(200).json({ message: "Password has been reset successfully." });
   } catch (error) {
     console.error("Reset password error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+export const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId; // From JWT token
+    
+    const user = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({ 
+      message: "Profile retrieved successfully.",
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
