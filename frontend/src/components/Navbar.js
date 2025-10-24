@@ -13,18 +13,25 @@ const Navbar = () => {
   useEffect(() => {
     const checkAuthStatus = () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        // Fetch user profile to get current user info
+      const role = localStorage.getItem('role');
+      const name = localStorage.getItem('name');
+      
+      if (token && role && name) {
+        // Use localStorage data for immediate UI update
+        setUser({
+          fullName: name,
+          role: role
+        });
+        setIsLoggedIn(true);
+        
+        // Optionally fetch fresh profile data in background
         API.get('/profile')
           .then(response => {
             setUser(response.data.user);
-            setIsLoggedIn(true);
           })
           .catch(error => {
             console.error('Error fetching profile:', error);
-            localStorage.removeItem('token');
-            setIsLoggedIn(false);
-            setUser(null);
+            // Don't logout on profile fetch error, keep using localStorage data
           });
       } else {
         setIsLoggedIn(false);
@@ -37,7 +44,7 @@ const Navbar = () => {
 
     // Listen for storage changes (when token is added/removed)
     const handleStorageChange = (e) => {
-      if (e.key === 'token') {
+      if (e.key === 'token' || e.key === 'role' || e.key === 'name') {
         checkAuthStatus();
       }
     };
@@ -59,6 +66,8 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('name');
     setUser(null);
     setIsLoggedIn(false);
     // Dispatch custom event to notify other components
@@ -84,11 +93,11 @@ const Navbar = () => {
 
   const handleDashboard = () => {
     if (user?.role === 'admin') {
-      navigate('/admin/dashboard');
+      navigate('/AdminDashboard');
     } else if (user?.role === 'teacher') {
-      navigate('/teacher/dashboard');
+      navigate('/TeacherDashboard');
     } else if (user?.role === 'student') {
-      navigate('/student/dashboard');
+      navigate('/StudentDashboard');
     }
     setIsMenuOpen(false);
   };
