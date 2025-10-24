@@ -102,6 +102,11 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
+  const handleContact = () => {
+    navigate('/contact');
+    setIsMenuOpen(false);
+  };
+
   // Don't show navbar on login/signup pages
   if (location.pathname === '/login' || location.pathname === '/signup') {
     return null;
@@ -118,6 +123,10 @@ const Navbar = () => {
         <NavLinks>
           <NavLink onClick={handleHome} active={location.pathname === '/'}>
             Home
+          </NavLink>
+          
+          <NavLink onClick={handleContact} active={location.pathname === '/contact'}>
+            Contact Us
           </NavLink>
           
           {isLoggedIn && (
@@ -168,6 +177,10 @@ const Navbar = () => {
         <MobileMenu>
           <MobileNavLink onClick={handleHome} active={location.pathname === '/'}>
             Home
+          </MobileNavLink>
+          
+          <MobileNavLink onClick={handleContact} active={location.pathname === '/contact'}>
+            Contact Us
           </MobileNavLink>
           
           {isLoggedIn && (
