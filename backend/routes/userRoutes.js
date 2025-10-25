@@ -1,6 +1,16 @@
 import express from "express";
 import User from "../models/User.js";
-import { signupUser, loginUser, forgotPassword, resetPassword, getUserProfile } from "../controllers/userController.js";
+import { 
+  signupUser, 
+  loginUser, 
+  forgotPassword, 
+  resetPassword, 
+  getUserProfile,
+  addTeacher,
+  getAllTeachers,
+  updateTeacher,
+  deleteTeacher
+} from "../controllers/userController.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -23,9 +33,24 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// Middleware to verify admin role
+const verifyAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: "Access denied. Admin role required." });
+  }
+  next();
+};
+
 router.post("/signup", signupUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", verifyToken, getUserProfile);
+
+// Teacher management routes (admin only)
+router.get("/teachers", verifyToken, verifyAdmin, getAllTeachers);
+router.post("/teachers", verifyToken, verifyAdmin, addTeacher);
+router.put("/teachers/:teacherId", verifyToken, verifyAdmin, updateTeacher);
+router.delete("/teachers/:teacherId", verifyToken, verifyAdmin, deleteTeacher);
+
 export default router;
