@@ -164,7 +164,7 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
           onMouseLeave={(e) => {
             e.target.style.backgroundColor = 'transparent';
             e.target.style.color = 'rgba(255, 255, 255, 0.8)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.4)';
           }}
         >
           Logout
