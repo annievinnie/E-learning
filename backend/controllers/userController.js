@@ -35,7 +35,6 @@ export const signupUser = async (req, res) => {
   }
 };
 
-// -------------------- LOGIN --------------------
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -54,8 +53,13 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
+    // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { 
+        userId: user._id, 
+        email: user.email, 
+        role: user.role 
+      },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "24h" }
     );
@@ -67,8 +71,8 @@ export const loginUser = async (req, res) => {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
-        role: user.role,
-      },
+        role: user.role
+      }
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -76,7 +80,6 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// -------------------- FORGOT PASSWORD --------------------
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -178,175 +181,28 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// -------------------- GET USER PROFILE --------------------
 export const getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.userId;
-
-    const user = await User.findById(userId).select(
-      "-password -resetPasswordToken -resetPasswordExpires"
-    );
-
+    const userId = req.user.userId; // From JWT token
+    
+    const user = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+    
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    res.status(200).json({
+    res.status(200).json({ 
       message: "Profile retrieved successfully.",
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
         role: user.role,
-        createdAt: user.createdAt,
-      },
+        createdAt: user.createdAt
+      }
     });
   } catch (error) {
     console.error("Get profile error:", error);
-    res.status(500).json({ message: "Server error. Please try again later." });
-  }
-};
-
-// -------------------- ADD TEACHER (Admin only) --------------------
-export const addTeacher = async (req, res) => {
-  try {
-    const { fullName, email, password } = req.body;
-
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
-
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters long." });
-    }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered." });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newTeacher = new User({
-      fullName,
-      email,
-      password: hashedPassword,
-      role: "teacher",
-    });
-
-    await newTeacher.save();
-
-    res.status(201).json({
-      message: "Teacher added successfully!",
-      teacher: {
-        id: newTeacher._id,
-        fullName: newTeacher.fullName,
-        email: newTeacher.email,
-        role: newTeacher.role,
-        createdAt: newTeacher.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error("Add teacher error:", error);
-    res.status(500).json({ message: "Server error. Please try again later." });
-  }
-};
-
-// -------------------- GET ALL TEACHERS (Admin only) --------------------
-export const getAllTeachers = async (req, res) => {
-  try {
-    const teachers = await User.find({ role: "teacher" })
-      .select("-password -resetPasswordToken -resetPasswordExpires")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      message: "Teachers retrieved successfully.",
-      teachers: teachers.map((teacher) => ({
-        id: teacher._id,
-        fullName: teacher.fullName,
-        email: teacher.email,
-        role: teacher.role,
-        createdAt: teacher.createdAt,
-      })),
-    });
-  } catch (error) {
-    console.error("Get teachers error:", error);
-    res.status(500).json({ message: "Server error. Please try again later." });
-  }
-};
-
-// -------------------- UPDATE TEACHER (Admin only) --------------------
-export const updateTeacher = async (req, res) => {
-  try {
-    const { teacherId } = req.params;
-    const { fullName, email, password } = req.body;
-
-    if (!fullName || !email) {
-      return res
-        .status(400)
-        .json({ message: "Full name and email are required." });
-    }
-
-    const teacher = await User.findOne({ _id: teacherId, role: "teacher" });
-    if (!teacher) {
-      return res.status(404).json({ message: "Teacher not found." });
-    }
-
-    if (email !== teacher.email) {
-      const existingUser = await User.findOne({ email, _id: { $ne: teacherId } });
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already registered." });
-      }
-    }
-
-    teacher.fullName = fullName;
-    teacher.email = email;
-
-    if (password) {
-      if (password.length < 6) {
-        return res
-          .status(400)
-          .json({ message: "Password must be at least 6 characters long." });
-      }
-      const hashedPassword = await bcrypt.hash(password, 10);
-      teacher.password = hashedPassword;
-    }
-
-    await teacher.save();
-
-    res.status(200).json({
-      message: "Teacher updated successfully!",
-      teacher: {
-        id: teacher._id,
-        fullName: teacher.fullName,
-        email: teacher.email,
-        role: teacher.role,
-        createdAt: teacher.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error("Update teacher error:", error);
-    res.status(500).json({ message: "Server error. Please try again later." });
-  }
-};
-
-// -------------------- DELETE TEACHER (Admin only) --------------------
-export const deleteTeacher = async (req, res) => {
-  try {
-    const { teacherId } = req.params;
-
-    const teacher = await User.findOne({ _id: teacherId, role: "teacher" });
-    if (!teacher) {
-      return res.status(404).json({ message: "Teacher not found." });
-    }
-
-    await User.findByIdAndDelete(teacherId);
-
-    res.status(200).json({ message: "Teacher deleted successfully." });
-  } catch (error) {
-    console.error("Delete teacher error:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
