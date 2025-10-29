@@ -426,3 +426,187 @@ export const rejectTeacherApplication = async (req, res) => {
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
+
+// Get rejected teacher applications (Admin only)
+export const getRejectedTeacherApplications = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+
+    const rejectedApplications = await TeacherApplication.find({ status: "rejected" })
+      .sort({ reviewedAt: -1 });
+
+    res.status(200).json({
+      message: "Rejected teacher applications retrieved successfully.",
+      applications: rejectedApplications
+    });
+  } catch (error) {
+    console.error("Get rejected applications error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+// Get all teachers (Admin only)
+export const getAllTeachers = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+
+    const teachers = await User.find({ role: "teacher" })
+      .select('-password -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "Teachers retrieved successfully.",
+      teachers
+    });
+  } catch (error) {
+    console.error("Get all teachers error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+// Create a teacher directly (Admin only)
+export const createTeacher = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+
+    const { fullName, email, password } = req.body;
+
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered." });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create teacher account
+    const newTeacher = new User({
+      fullName,
+      email,
+      password: hashedPassword,
+      role: "teacher",
+      isApproved: true, // Admin-created teachers are automatically approved
+    });
+
+    await newTeacher.save();
+
+    res.status(201).json({
+      message: "Teacher created successfully!",
+      teacher: {
+        id: newTeacher._id,
+        fullName: newTeacher.fullName,
+        email: newTeacher.email,
+        role: newTeacher.role,
+        isApproved: newTeacher.isApproved
+      }
+    });
+  } catch (error) {
+    console.error("Create teacher error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+// Update a teacher (Admin only)
+export const updateTeacher = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+
+    const { teacherId } = req.params;
+    const { fullName, email, password, isApproved } = req.body;
+
+    const teacher = await User.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher not found." });
+    }
+
+    if (teacher.role !== "teacher") {
+      return res.status(400).json({ message: "User is not a teacher." });
+    }
+
+    // Update fields
+    if (fullName) teacher.fullName = fullName;
+    if (email) {
+      // Check if email is already taken by another user
+      const existingUser = await User.findOne({ email, _id: { $ne: teacherId } });
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered." });
+      }
+      teacher.email = email;
+    }
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      teacher.password = hashedPassword;
+    }
+    if (typeof isApproved === "boolean") {
+      teacher.isApproved = isApproved;
+    }
+
+    await teacher.save();
+
+    res.status(200).json({
+      message: "Teacher updated successfully.",
+      teacher: {
+        id: teacher._id,
+        fullName: teacher.fullName,
+        email: teacher.email,
+        role: teacher.role,
+        isApproved: teacher.isApproved
+      }
+    });
+  } catch (error) {
+    console.error("Update teacher error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+// Delete a teacher (Admin only)
+export const deleteTeacher = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+
+    const { teacherId } = req.params;
+
+    const teacher = await User.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher not found." });
+    }
+
+    if (teacher.role !== "teacher") {
+      return res.status(400).json({ message: "User is not a teacher." });
+    }
+
+    await User.findByIdAndDelete(teacherId);
+
+    res.status(200).json({
+      message: "Teacher deleted successfully.",
+      teacher: {
+        id: teacher._id,
+        fullName: teacher.fullName,
+        email: teacher.email
+      }
+    });
+  } catch (error) {
+    console.error("Delete teacher error:", error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
