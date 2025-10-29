@@ -1,6 +1,15 @@
 import express from "express";
 import User from "../models/User.js";
-import { signupUser, loginUser, forgotPassword, resetPassword, getUserProfile } from "../controllers/userController.js";
+import { 
+  signupUser, 
+  loginUser, 
+  forgotPassword, 
+  resetPassword, 
+  getUserProfile,
+  getPendingTeacherApplications,
+  approveTeacherApplication,
+  rejectTeacherApplication
+} from "../controllers/userController.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -28,4 +37,10 @@ router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", verifyToken, getUserProfile);
+
+// Admin routes for teacher application management
+router.get("/admin/pending-teachers", verifyToken, getPendingTeacherApplications);
+router.post("/admin/approve-teacher/:applicationId", verifyToken, approveTeacherApplication);
+router.post("/admin/reject-teacher/:applicationId", verifyToken, rejectTeacherApplication);
+
 export default router;

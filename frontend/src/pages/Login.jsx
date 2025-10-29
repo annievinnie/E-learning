@@ -147,6 +147,11 @@ export default function LoginPage() {
       const msg = err.response?.data?.message || 'Login failed';
       setError(msg);
       setShowPopup(true);
+      
+      // If it's an approval error, show a special message
+      if (err.response?.data?.requiresApproval) {
+        setError("Your teacher account is pending admin approval. Please wait for approval before logging in.");
+      }
     } finally {
       setLoader(false);
     }
