@@ -190,14 +190,23 @@ const SignupPage = () => {
         const data = await response.json();
 
         if (response.ok) {
-            setMessage(data.message || 'Account created successfully!');
-            setIsError(false);
-            setShowPopup(true);
-            setTimeout(() => {
-                // console.log('Navigating to login...');
-                navigate('/');
-                setLoader(false);
-            }, 1000);
+            if (data.isApplication) {
+                setMessage(data.message || 'Teacher application submitted successfully! Your application is pending admin approval.');
+                setIsError(false);
+                setShowPopup(true);
+                setTimeout(() => {
+                    navigate('/');
+                    setLoader(false);
+                }, 3000); // Longer delay for teacher application message
+            } else {
+                setMessage(data.message || 'Account created successfully!');
+                setIsError(false);
+                setShowPopup(true);
+                setTimeout(() => {
+                    navigate('/');
+                    setLoader(false);
+                }, 1000);
+            }
         } else {
             setMessage(data.message || 'Registration failed.');
             setIsError(true);
