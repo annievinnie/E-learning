@@ -42,12 +42,13 @@ const AdminDashboard = () => {
         localStorage.removeItem('token');
         navigate('/login');
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const fetchPendingApplications = async () => {
     try {
       const response = await API.get('/admin/pending-teachers');
-      setPendingApplications(response.data.applications);
+      setPendingApplications(response.data.applications || []);
     } catch (error) {
       console.error('Error fetching pending applications:', error);
     }
@@ -119,11 +120,11 @@ const AdminDashboard = () => {
 
   const validateTeacherForm = () => {
     const errors = {};
-    
+
     if (!teacherFormData.fullName.trim()) {
       errors.fullName = 'Full name is required';
     }
-    
+
     if (!teacherFormData.email.trim()) {
       errors.email = 'Email is required';
     } else {
@@ -132,40 +133,40 @@ const AdminDashboard = () => {
         errors.email = 'Please enter a valid email address';
       }
     }
-    
+
     if (!teacherFormData.password.trim()) {
       errors.password = 'Password is required';
     } else if (teacherFormData.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
-    
+
     return errors;
   };
 
   const handleAddTeacher = async (e) => {
     e.preventDefault();
-    
+
     const errors = validateTeacherForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // For now, just simulate a successful submission
       // In the future, this would make an API call to create a teacher
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       console.log('Teacher created:', teacherFormData);
       alert('Teacher added successfully!');
-      
+
       // Reset form
       setTeacherFormData({ fullName: '', email: '', password: '' });
       setFormErrors({});
       setShowAddTeacherForm(false);
-      
+
     } catch (err) {
       console.error('Error adding teacher:', err);
       alert('Failed to add teacher. Please try again.');
@@ -202,7 +203,7 @@ const AdminDashboard = () => {
                 Welcome back, {user?.fullName}! Here's what's happening on your platform.
               </p>
             </div>
-            
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -210,7 +211,6 @@ const AdminDashboard = () => {
               maxWidth: '1200px',
               margin: '0 auto'
             }}>
-              {/* Stats Cards */}
               <div style={{
                 backgroundColor: 'white',
                 padding: '2rem',
@@ -243,32 +243,10 @@ const AdminDashboard = () => {
                 <h3 style={{ color: '#1976d2', marginBottom: '1rem' }}>Active Courses</h3>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#9c27b0' }}>89</div>
               </div>
-
-              {/* Recent Activity */}
-              {/* <div style={{
-                backgroundColor: 'white',
-                padding: '2rem',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                gridColumn: '1 / -1'
-              }}>
-                <h3 style={{ color: '#1976d2', marginBottom: '1rem' }}>Recent Activity</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    New student registered: John Doe
-                  </div>
-                  <div style={{ padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    Course "React Basics" created by Teacher Smith
-                  </div>
-                  <div style={{ padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    System backup completed successfully
-                  </div>
-                </div>
-              </div> */}
             </div>
           </div>
         );
-      
+
       case 'students':
         return (
           <div>
@@ -283,15 +261,15 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'teachers':
         return (
           <div>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '2rem' 
+              marginBottom: '2rem'
             }}>
               <h1 style={{ color: '#1976d2', fontSize: '2.5rem', marginBottom: '0' }}>
                 Teachers Management
@@ -310,106 +288,81 @@ const AdminDashboard = () => {
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                   transition: 'all 0.3s ease'
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#45a049';
-                  e.target.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = '#4caf50';
-                  e.target.style.transform = 'translateY(0)';
-                }}
               >
                 + Add Teacher
               </button>
             </div>
 
-          {/* Pending Teacher Applications */}
-          {pendingApplications.length > 0 && (
-            <div style={{
-              backgroundColor: 'white',
-              padding: '2rem',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              gridColumn: '1 / -1'
-            }}>
-              <h3 style={{ color: '#1976d2', marginBottom: '1rem' }}>
-                Pending Teacher Applications ({pendingApplications.length})
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {pendingApplications.map((application) => (
-                  <div key={application._id} style={{ 
-                    padding: '1rem', 
-                    backgroundColor: '#fff3e0', 
-                    borderRadius: '8px',
-                    border: '1px solid #ff9800'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#e65100' }}>
-                          {application.fullName}
-                        </h4>
-                        <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>
-                          Email: {application.email}
-                        </p>
-                        <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>
-                          Applied: {new Date(application.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => handleApproveApplication(application._id)}
-                          style={{
-                            backgroundColor: '#4caf50',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem'
-                          }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => openRejectionModal(application)}
-                          style={{
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem'
-                          }}
-                        >
-                          Reject
-                        </button>
+            {/* Pending Teacher Applications */}
+            {pendingApplications.length > 0 && (
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                gridColumn: '1 / -1',
+                marginBottom: '1.5rem'
+              }}>
+                <h3 style={{ color: '#1976d2', marginBottom: '1rem' }}>
+                  Pending Teacher Applications ({pendingApplications.length})
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {pendingApplications.map((application) => (
+                    <div key={application._id} style={{
+                      padding: '1rem',
+                      backgroundColor: '#fff3e0',
+                      borderRadius: '8px',
+                      border: '1px solid #ff9800'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h4 style={{ margin: '0 0 0.5rem 0', color: '#e65100' }}>
+                            {application.fullName}
+                          </h4>
+                          <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>
+                            Email: {application.email}
+                          </p>
+                          <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>
+                            Applied: {application.createdAt ? new Date(application.createdAt).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => handleApproveApplication(application._id)}
+                            style={{
+                              backgroundColor: '#4caf50',
+                              color: 'white',
+                              border: 'none',
+                              padding: '0.5rem 1rem',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => openRejectionModal(application)}
+                            style={{
+                              backgroundColor: '#f44336',
+                              color: 'white',
+                              border: 'none',
+                              padding: '0.5rem 1rem',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Recent Activity */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            gridColumn: '1 / -1'
-          }}>
-            <h3 style={{ color: '#1976d2', marginBottom: '1rem' }}>Recent Activity</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                New student registered: John Doe
-              </div>
-              <div style={{ padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                Course "React Basics" created by Teacher Smith
-              </div>
-              <div style={{ padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                System backup completed successfully
             {/* Add Teacher Form */}
             {showAddTeacherForm && (
               <div style={{
@@ -423,12 +376,12 @@ const AdminDashboard = () => {
                 <h3 style={{ color: '#1976d2', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
                   Add New Teacher
                 </h3>
-                
+
                 <form onSubmit={handleAddTeacher}>
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       fontWeight: '500',
                       color: '#333'
                     }}>
@@ -457,9 +410,9 @@ const AdminDashboard = () => {
                   </div>
 
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       fontWeight: '500',
                       color: '#333'
                     }}>
@@ -488,9 +441,9 @@ const AdminDashboard = () => {
                   </div>
 
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       fontWeight: '500',
                       color: '#333'
                     }}>
@@ -537,7 +490,7 @@ const AdminDashboard = () => {
                     >
                       {isSubmitting ? 'Adding...' : 'Add Teacher'}
                     </button>
-                    
+
                     <button
                       type="button"
                       onClick={handleCancelAddTeacher}
@@ -577,7 +530,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'courses':
         return (
           <div>
@@ -591,89 +544,8 @@ const AdminDashboard = () => {
               <p>Course management features will be implemented here.</p>
             </div>
           </div>
-        </div>
-      </main>
-
-      {/* Rejection Modal */}
-      {showApprovalModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            maxWidth: '500px',
-            width: '90%'
-          }}>
-            <h3 style={{ marginTop: 0, color: '#f44336' }}>Reject Teacher Application</h3>
-            <p style={{ marginBottom: '1rem' }}>
-              Are you sure you want to reject {selectedApplication?.fullName}'s application?
-            </p>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Reason for rejection (optional):
-              </label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  minHeight: '80px',
-                  resize: 'vertical'
-                }}
-                placeholder="Enter reason for rejection..."
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowApprovalModal(false);
-                  setSelectedApplication(null);
-                  setRejectionReason('');
-                }}
-                style={{
-                  backgroundColor: '#666',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleRejectApplication(selectedApplication._id, rejectionReason)}
-                style={{
-                  backgroundColor: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Reject Application
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
         );
-      
+
       case 'analytics':
         return (
           <div>
@@ -688,7 +560,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'settings':
         return (
           <div>
@@ -703,7 +575,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'messages':
         return (
           <div>
@@ -718,7 +590,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      
+
       case 'reports':
         return (
           <div>
@@ -733,7 +605,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
-      
+
       default:
         return <div>Section not found</div>;
     }
@@ -742,21 +614,100 @@ const AdminDashboard = () => {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       {/* Sidebar */}
-      <AdminSidebar 
+      <AdminSidebar
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         user={user}
         onLogout={handleLogout}
       />
-      
+
       {/* Main Content */}
-      <div style={{ 
-        marginLeft: '250px', 
-        flex: 1, 
+      <div style={{
+        marginLeft: '250px',
+        flex: 1,
         padding: '2rem',
         overflow: 'auto'
       }}>
         {renderContent()}
+
+        {/* Rejection Modal (rendered at top-level so it isn't nested incorrectly) */}
+        {showApprovalModal && selectedApplication && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '8px',
+              maxWidth: '500px',
+              width: '90%'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#f44336' }}>Reject Teacher Application</h3>
+              <p style={{ marginBottom: '1rem' }}>
+                Are you sure you want to reject {selectedApplication?.fullName}'s application?
+              </p>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                  Reason for rejection (optional):
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    minHeight: '80px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Enter reason for rejection..."
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowApprovalModal(false);
+                    setSelectedApplication(null);
+                    setRejectionReason('');
+                  }}
+                  style={{
+                    backgroundColor: '#666',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRejectApplication(selectedApplication._id, rejectionReason)}
+                  style={{
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Reject Application
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
