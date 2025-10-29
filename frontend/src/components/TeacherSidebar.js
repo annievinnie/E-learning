@@ -5,7 +5,7 @@ const styles = {
   sidebar: {
     width: '250px',
     height: '100vh',
-    backgroundColor: '#1a237e',
+    backgroundColor: '#2e7d32',
     color: 'white',
     position: 'fixed',
     left: 0,
@@ -26,10 +26,10 @@ const styles = {
     marginBottom: '0.5rem',
     color: '#fff',
   },
-  adminBadge: {
+  teacherBadge: {
     fontSize: '0.8rem',
-    color: '#ffd54f',
-    backgroundColor: 'rgba(255, 213, 79, 0.2)',
+    color: '#c8e6c9',
+    backgroundColor: 'rgba(200, 230, 201, 0.2)',
     padding: '0.25rem 0.5rem',
     borderRadius: '12px',
     display: 'inline-block',
@@ -51,7 +51,7 @@ const styles = {
   navItemActive: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     color: '#fff',
-    borderLeft: '3px solid #ffd54f',
+    borderLeft: '3px solid #c8e6c9',
   },
   navItemHover: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -96,12 +96,13 @@ const styles = {
 };
 
 // ------------------ Sidebar Component ------------------
-const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
+const TeacherSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'courses', label: 'My Courses', icon: '📚' },
+    { id: 'assignments', label: 'Assignments', icon: '📝' },
     { id: 'students', label: 'Students', icon: '👥' },
-    { id: 'teachers', label: 'Teachers', icon: '👨‍🏫' },
-    { id: 'courses', label: 'Courses', icon: '📚' },
+    { id: 'grades', label: 'Grades', icon: '📈' },
   ];
 
   const handleNavClick = (sectionId) => {
@@ -119,7 +120,7 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
       {/* Header */}
       <div style={styles.sidebarHeader}>
         <div style={styles.logo}>🎓 E-Learning</div>
-        <div style={styles.adminBadge}>Admin Panel</div>
+        <div style={styles.teacherBadge}>Teacher Panel</div>
       </div>
 
       {/* Navigation */}
@@ -153,7 +154,7 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
       {/* Footer */}
       <div style={styles.sidebarFooter}>
         <div style={styles.userInfo}>
-          Welcome, {user?.fullName || 'Admin'}
+          Welcome, {user?.fullName || 'Teacher'}
         </div>
         <button
           style={styles.logoutButton}
@@ -174,4 +175,4 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
   );
 };
 
-export default AdminSidebar;
+export default TeacherSidebar;
