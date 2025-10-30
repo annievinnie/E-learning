@@ -8,7 +8,12 @@ import {
   getUserProfile,
   getPendingTeacherApplications,
   approveTeacherApplication,
-  rejectTeacherApplication
+  rejectTeacherApplication,
+  getRejectedTeacherApplications,
+  getAllTeachers,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher
 } from "../controllers/userController.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -40,7 +45,14 @@ router.get("/profile", verifyToken, getUserProfile);
 
 // Admin routes for teacher application management
 router.get("/admin/pending-teachers", verifyToken, getPendingTeacherApplications);
+router.get("/admin/rejected-teachers", verifyToken, getRejectedTeacherApplications);
 router.post("/admin/approve-teacher/:applicationId", verifyToken, approveTeacherApplication);
 router.post("/admin/reject-teacher/:applicationId", verifyToken, rejectTeacherApplication);
+
+// Admin routes for teacher CRUD operations
+router.get("/admin/teachers", verifyToken, getAllTeachers);
+router.post("/admin/teachers", verifyToken, createTeacher);
+router.put("/admin/teachers/:teacherId", verifyToken, updateTeacher);
+router.delete("/admin/teachers/:teacherId", verifyToken, deleteTeacher);
 
 export default router;
