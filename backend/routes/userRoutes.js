@@ -1,6 +1,20 @@
 import express from "express";
 import User from "../models/User.js";
-import { signupUser, loginUser, forgotPassword, resetPassword, getUserProfile, addTeacher, getAllTeachers, updateTeacher, deleteTeacher } from "../controllers/userController.js";
+import { 
+  signupUser, 
+  loginUser, 
+  forgotPassword, 
+  resetPassword, 
+  getUserProfile,
+  getPendingTeacherApplications,
+  approveTeacherApplication,
+  rejectTeacherApplication,
+  getRejectedTeacherApplications,
+  getAllTeachers,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher
+} from "../controllers/userController.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -37,10 +51,16 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", verifyToken, getUserProfile);
 
-// Teacher management routes (admin only)
-router.post("/teachers", verifyToken, verifyAdmin, addTeacher);
-router.get("/teachers", verifyToken, verifyAdmin, getAllTeachers);
-router.put("/teachers/:teacherId", verifyToken, verifyAdmin, updateTeacher);
-router.delete("/teachers/:teacherId", verifyToken, verifyAdmin, deleteTeacher);
+// Admin routes for teacher application management
+router.get("/admin/pending-teachers", verifyToken, getPendingTeacherApplications);
+router.get("/admin/rejected-teachers", verifyToken, getRejectedTeacherApplications);
+router.post("/admin/approve-teacher/:applicationId", verifyToken, approveTeacherApplication);
+router.post("/admin/reject-teacher/:applicationId", verifyToken, rejectTeacherApplication);
+
+// Admin routes for teacher CRUD operations
+router.get("/admin/teachers", verifyToken, getAllTeachers);
+router.post("/admin/teachers", verifyToken, createTeacher);
+router.put("/admin/teachers/:teacherId", verifyToken, updateTeacher);
+router.delete("/admin/teachers/:teacherId", verifyToken, deleteTeacher);
 
 export default router;
