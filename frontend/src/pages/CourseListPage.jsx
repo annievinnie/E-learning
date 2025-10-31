@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     FaSearch,
     FaUsers,
@@ -8,104 +8,52 @@ import {
     FaMedal,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import API from "../api";
 
 const CoursesListPage = () => {
     const navigate = useNavigate();
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [selectedLevel, setSelectedLevel] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+        fetchCourses();
+    }, []);
+
+    const fetchCourses = async () => {
+        try {
+            const response = await API.get('/student/courses');
+            if (response.data.success) {
+                setCourses(response.data.courses || []);
+            }
+        } catch (error) {
+            console.error('Error fetching courses:', error);
+            // Keep empty array on error
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleCourseClick = (courseId) => {
         navigate(`/course/${courseId}`);
     };
-
-    // inside your course card JSX:
-
-
-
-    const courses = [
-        {
-            id: 1,
-            title: "Complete Web Development Masterclass",
-            instructor: "Sarah Johnson",
-            instructorImage:
-                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-            thumbnail:
-                "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&h=450&fit=crop",
-            category: "Development",
-            level: "Beginner",
-            rating: 4.8,
-            reviewCount: 12847,
-            students: 45231,
-            duration: "42h 30m",
-            lessons: 286,
-            price: 89.99,
-            originalPrice: 199.99,
-            bestseller: true,
-            description:
-                "Master web development from scratch with HTML, CSS, JavaScript, React, Node.js, and MongoDB.",
-        },
-        {
-            id: 2,
-            title: "Advanced React & TypeScript Development",
-            instructor: "Michael Chen",
-            instructorImage:
-                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-            thumbnail:
-                "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=450&fit=crop",
-            category: "Development",
-            level: "Advanced",
-            rating: 4.9,
-            reviewCount: 8932,
-            students: 23456,
-            duration: "28h 15m",
-            lessons: 187,
-            price: 109.99,
-            originalPrice: 229.99,
-            bestseller: true,
-            description:
-                "Take your React skills to the next level with TypeScript, performance optimization, and testing strategies.",
-        },
-        {
-            id: 3,
-            title: "Machine Learning & AI with Python",
-            instructor: "Dr. James Kumar",
-            instructorImage:
-                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop",
-            thumbnail:
-                "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&h=450&fit=crop",
-            category: "Data Science",
-            level: "Intermediate",
-            rating: 4.9,
-            reviewCount: 9876,
-            students: 34567,
-            duration: "52h 20m",
-            lessons: 312,
-            price: 119.99,
-            originalPrice: 249.99,
-            bestseller: true,
-            description:
-                "Comprehensive guide to machine learning, deep learning, and AI using Python.",
-        },
-    ];
 
     const categories = ["all", "Development", "Data Science"];
     const levels = ["all", "Beginner", "Intermediate", "Advanced"];
 
     const filteredCourses = courses.filter((course) => {
         const matchesCategory =
-            selectedCategory === "all" || course.category === selectedCategory;
+            selectedCategory === "all" || (course.category || 'Development') === selectedCategory;
         const matchesLevel =
-            selectedLevel === "all" || course.level === selectedLevel;
+            selectedLevel === "all" || (course.level?.toLowerCase() || 'beginner') === selectedLevel.toLowerCase();
         const matchesSearch =
-            course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.description.toLowerCase().includes(searchQuery.toLowerCase());
+            course.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.description?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesLevel && matchesSearch;
     });
-
-     useEffect(() => {
-        window.scrollTo(0, 0); // Scrolls to top of the page
-      }, []);
     return (
         <div className="container-fluid px-3">
             {/* Hero Section */}
@@ -160,62 +108,85 @@ const CoursesListPage = () => {
                 </select>
             </div>
 
+            {/* Loading State */}
+            {loading && (
+                <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3">Loading courses...</p>
+                </div>
+            )}
+
             {/* Courses Grid */}
-            <div className="row g-3">
-                {filteredCourses.map((course) => (
-                    <div className="col-12 col-md-6 col-lg-4" key={course.id}>
+            {!loading && (
+                <div className="row g-3">
+                    {filteredCourses.map((course) => (
+                        <div className="col-12 col-md-6 col-lg-4" key={course.id || course._id}>
                         <div className="card shadow-sm border-0 h-100">
-                            <img
-                                src={course.thumbnail}
-                                className="card-img-top"
-                                alt={course.title}
-                            />
+                            {course.thumbnail ? (
+                                <img
+                                    src={course.thumbnail}
+                                    className="card-img-top"
+                                    alt={course.title}
+                                    style={{ height: '200px', objectFit: 'cover' }}
+                                    onError={(e) => {
+                                        e.target.src = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&h=450&fit=crop';
+                                    }}
+                                />
+                            ) : (
+                                <div className="card-img-top bg-secondary d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
+                                    <span className="text-white">No Image</span>
+                                </div>
+                            )}
                             <div className="card-body d-flex flex-column">
                                 <div className="d-flex justify-content-between align-items-center mb-2">
-                                    <span className="badge bg-primary">{course.category}</span>
+                                    <span className="badge bg-primary">{course.category || 'Development'}</span>
                                     <span className="badge bg-light text-dark border">
-                                        {course.level}
+                                        {course.level || 'Beginner'}
                                     </span>
                                 </div>
 
                                 <h5 className="card-title fw-bold">{course.title}</h5>
                                 <p className="text-muted small flex-grow-1">
-                                    {course.description.length > 80
+                                    {course.description && course.description.length > 80
                                         ? course.description.slice(0, 80) + "..."
-                                        : course.description}
+                                        : course.description || 'No description available'}
                                 </p>
 
                                 <div className="d-flex align-items-center mb-3">
                                     <img
-                                        src={course.instructorImage}
-                                        alt={course.instructor}
+                                        src={course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
+                                        alt={course.instructor || "Instructor"}
                                         className="rounded-circle me-2"
                                         width="32"
                                         height="32"
                                     />
-                                    <span className="text-secondary small">{course.instructor}</span>
+                                    <span className="text-secondary small">{course.instructor || 'Unknown'}</span>
                                 </div>
 
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <span className="text-warning fw-bold">
                                         <FaStar className="me-1" />
-                                        {course.rating} ({course.reviewCount.toLocaleString()})
+                                        {course.rating || 4.5} ({course.reviewCount?.toLocaleString() || course.reviews?.toLocaleString() || 0})
                                     </span>
                                     <span className="text-muted small">
                                         <FaUsers className="me-1" />
-                                        {course.students.toLocaleString()}
+                                        {course.students?.toLocaleString() || 0}
                                     </span>
                                 </div>
 
                                 <div className="d-flex justify-content-between align-items-center mt-auto">
                                     <div>
-                                        <span className="fw-bold fs-5 text-dark">${course.price}</span>
-                                        <span className="text-muted text-decoration-line-through ms-2">
-                                            ${course.originalPrice}
-                                        </span>
+                                        <span className="fw-bold fs-5 text-dark">${course.price || 0}</span>
+                                        {course.originalPrice && course.originalPrice > course.price && (
+                                            <span className="text-muted text-decoration-line-through ms-2">
+                                                ${course.originalPrice}
+                                            </span>
+                                        )}
                                     </div>
                                     <button
-                                        onClick={() => handleCourseClick(course.id)}
+                                        onClick={() => handleCourseClick(course.id || course._id)}
                                         className="btn btn-outline-primary btn-sm"
                                     >
                                         Enroll Now
@@ -224,11 +195,12 @@ const CoursesListPage = () => {
                             </div>
                         </div>
                     </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Empty State */}
-            {filteredCourses.length === 0 && (
+            {!loading && filteredCourses.length === 0 && (
                 <div className="text-center py-5">
                     <FaSearch size={40} className="text-muted mb-3" />
                     <h5 className="fw-bold text-dark">No courses found</h5>
