@@ -531,24 +531,65 @@ const AdminDashboard = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {pendingApplications.map((application) => (
                       <div key={application._id} style={{
-                        padding: '1rem',
+                        padding: '1.5rem',
                         backgroundColor: '#fff3e0',
                         borderRadius: '8px',
-                        border: '1px solid #ff9800'
+                        border: '1px solid #ff9800',
+                        marginBottom: '1rem'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <h4 style={{ margin: '0 0 0.5rem 0', color: '#e65100' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0', color: '#e65100', fontSize: '1.2rem' }}>
                               {application.fullName}
                             </h4>
-                            <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>
-                              Email: {application.email}
-                            </p>
-                            <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
+                                <strong>Email:</strong> {application.email}
+                              </p>
+                              {application.age && (
+                                <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
+                                  <strong>Age:</strong> {application.age}
+                                </p>
+                              )}
+                              {application.phone && (
+                                <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
+                                  <strong>Phone:</strong> {application.phone}
+                                </p>
+                              )}
+                              {application.confidenceLevel && (
+                                <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
+                                  <strong>Confidence Level:</strong> {application.confidenceLevel}
+                                </p>
+                              )}
+                            </div>
+                            {application.teachingExperience && (
+                              <p style={{ margin: '0.5rem 0', color: '#666', fontSize: '0.9rem' }}>
+                                <strong>Experience:</strong> {application.teachingExperience}
+                              </p>
+                            )}
+                            {application.coursesKnown && application.coursesKnown.length > 0 && (
+                              <div style={{ margin: '0.5rem 0' }}>
+                                <strong style={{ color: '#666', fontSize: '0.9rem' }}>Courses:</strong>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                  {application.coursesKnown.map((course, idx) => (
+                                    <span key={idx} style={{
+                                      background: '#e3f2fd',
+                                      color: '#1976d2',
+                                      padding: '0.25rem 0.75rem',
+                                      borderRadius: '12px',
+                                      fontSize: '0.85rem'
+                                    }}>
+                                      {course}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#999' }}>
                               Applied: {application.createdAt ? new Date(application.createdAt).toLocaleDateString() : 'N/A'}
                             </p>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <button
                               onClick={() => handleApproveApplication(application._id)}
                               style={{
@@ -558,7 +599,8 @@ const AdminDashboard = () => {
                                 padding: '0.5rem 1rem',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
-                                fontSize: '0.9rem'
+                                fontSize: '0.9rem',
+                                whiteSpace: 'nowrap'
                               }}
                             >
                               Approve
@@ -572,7 +614,8 @@ const AdminDashboard = () => {
                                 padding: '0.5rem 1rem',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
-                                fontSize: '0.9rem'
+                                fontSize: '0.9rem',
+                                whiteSpace: 'nowrap'
                               }}
                             >
                               Reject

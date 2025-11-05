@@ -4,7 +4,12 @@ const teacherApplicationSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // Store hashed password for later use
+    password: { type: String, required: false }, // Optional for detailed applications
+    age: { type: Number },
+    phone: { type: String },
+    teachingExperience: { type: String }, // Years of experience or description
+    coursesKnown: { type: [String] }, // Array of courses/subjects
+    confidenceLevel: { type: String, enum: ["Beginner", "Intermediate", "Advanced", "Expert"] },
     status: { 
       type: String, 
       enum: ["pending", "approved", "rejected"], 
