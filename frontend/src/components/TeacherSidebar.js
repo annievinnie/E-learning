@@ -3,7 +3,7 @@ import React from 'react';
 // ------------------ Sidebar Styles ------------------
 const styles = {
   sidebar: {
-    width: '250px',
+    width: '280px',
     height: '100vh',
     backgroundColor: '#2e7d32',
     color: 'white',
@@ -59,8 +59,8 @@ const styles = {
   },
   navIcon: {
     marginRight: '0.75rem',
-    fontSize: '1.2rem',
-    width: '20px',
+    fontSize: '1.4rem',
+    width: '28px',
     textAlign: 'center',
   },
   navText: {
@@ -78,20 +78,24 @@ const styles = {
     marginBottom: '0.5rem',
   },
   logoutButton: {
-    backgroundColor: 'transparent',
-    color: 'rgba(255, 255, 255, 0.8)',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
-    padding: '0.5rem 1rem',
-    borderRadius: '4px',
+    background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(211, 47, 47, 0.9) 100%)',
+    color: '#fff',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    padding: '0.75rem 1.5rem',
+    borderRadius: '10px',
     cursor: 'pointer',
-    fontSize: '0.8rem',
-    transition: 'all 0.3s ease',
+    fontSize: '0.9rem',
+    fontWeight: 600,
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     width: '100%',
+    boxShadow: '0 4px 15px rgba(244, 67, 54, 0.3)'
   },
   logoutButtonHover: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    background: 'linear-gradient(135deg, rgba(244, 67, 54, 1) 0%, rgba(211, 47, 47, 1) 100%)',
     color: '#fff',
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 20px rgba(244, 67, 54, 0.5)'
   },
 };
 
@@ -99,9 +103,9 @@ const styles = {
 const TeacherSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'courses', label: 'My Courses', icon: '📚' },
-    { id: 'assignments', label: 'Assignments', icon: '📝' },
-    { id: 'students', label: 'Students', icon: '👥' },
+    { id: 'students', label: 'Students', icon: '�' },
+    { id: 'courses', label: 'My Courses', icon: '�' },
+    { id: 'assignments', label: 'Assignments', icon: '�' },
     { id: 'grades', label: 'Grades', icon: '📈' },
   ];
 
@@ -163,12 +167,10 @@ const TeacherSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
             Object.assign(e.target.style, styles.logoutButtonHover);
           }}
           onMouseLeave={(e) => {
-            e.target.style.backgroundColor = 'transparent';
-            e.target.style.color = 'rgba(255, 255, 255, 0.8)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            Object.assign(e.target.style, styles.logoutButton);
           }}
         >
-          Logout
+          🚪 Logout
         </button>
       </div>
     </div>
