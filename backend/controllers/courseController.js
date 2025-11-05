@@ -4,7 +4,7 @@ import User from '../models/User.js';
 // Get all courses for a teacher
 export const getTeacherCourses = async (req, res) => {
   try {
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
     
     const courses = await Course.find({ teacher: teacherId })
       .populate('teacher', 'fullName email')
@@ -28,7 +28,7 @@ export const getTeacherCourses = async (req, res) => {
 export const getCourseById = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -60,8 +60,8 @@ export const getCourseById = async (req, res) => {
 // Create a new course
 export const createCourse = async (req, res) => {
   try {
-    const { title, description, duration, level } = req.body;
-    const teacherId = req.user.id;
+    const { title, description, duration, level, price, thumbnail } = req.body;
+    const teacherId = req.user.userId || req.user.id;
 
     // Validation
     if (!title || !description || !duration) {
@@ -85,6 +85,8 @@ export const createCourse = async (req, res) => {
       description,
       duration,
       level: level || 'beginner',
+      price: price || 0,
+      thumbnail: thumbnail || '',
       teacher: teacherId,
       modules: [],
       students: [],
@@ -116,8 +118,8 @@ export const createCourse = async (req, res) => {
 export const updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, duration, level, status } = req.body;
-    const teacherId = req.user.id;
+    const { title, description, duration, level, status, price, thumbnail } = req.body;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -137,6 +139,8 @@ export const updateCourse = async (req, res) => {
     if (duration) course.duration = duration;
     if (level) course.level = level;
     if (status) course.status = status;
+    if (price !== undefined) course.price = price;
+    if (thumbnail !== undefined) course.thumbnail = thumbnail;
 
     await course.save();
 
@@ -163,7 +167,7 @@ export const updateCourse = async (req, res) => {
 export const deleteCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -197,7 +201,7 @@ export const addModuleToCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
     const { title, description, order } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     // Validation
     if (!title || !description) {
@@ -248,7 +252,7 @@ export const updateModule = async (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
     const { title, description, order } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -294,7 +298,7 @@ export const updateModule = async (req, res) => {
 export const deleteModule = async (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -338,7 +342,7 @@ export const addVideoToModule = async (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
     const { title, description, duration, order, videoUrl } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     // Validation
     if (!title || !description || !duration || !videoUrl) {
@@ -398,7 +402,7 @@ export const updateVideo = async (req, res) => {
   try {
     const { courseId, moduleId, videoId } = req.params;
     const { title, description, duration, order, videoUrl } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -454,7 +458,7 @@ export const updateVideo = async (req, res) => {
 export const deleteVideo = async (req, res) => {
   try {
     const { courseId, moduleId, videoId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
       _id: courseId, 
