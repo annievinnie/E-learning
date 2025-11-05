@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import TeacherSidebar from '../components/TeacherSidebar';
+import styled from 'styled-components';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -78,6 +79,157 @@ const TeacherDashboard = () => {
   });
   const [editAssignmentFormErrors, setEditAssignmentFormErrors] = useState({});
   const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
+
+  // Styled Components (aligned with AdminDashboard)
+  const DashboardContainer = styled.div`
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+  `;
+
+  const ContentWrapper = styled.div`
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    margin-left: 280px;
+    min-height: calc(100vh - 4rem);
+  `;
+
+  const PageTitle = styled.h1`
+    font-size: 2.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
+  `;
+
+  const PageSubtitle = styled.p`
+    color: #666;
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    font-weight: 400;
+  `;
+
+  const LoadingSpinner = styled.div`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    &::after {
+      content: '';
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  `;
+
+  // Extra Admin-style components
+  const StatsGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+  `;
+
+  const StatCard = styled.div`
+    background: linear-gradient(135deg, ${props => props.color1 || '#667eea'} 0%, ${props => props.color2 || '#764ba2'} 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    color: white;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+
+    &:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3); }
+    &::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); transition: all 0.5s ease; }
+    &:hover::before { top: -30%; right: -30%; }
+  `;
+
+  const StatTitle = styled.h3`
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  `;
+
+  const StatValue = styled.div`
+    font-size: 3rem;
+    font-weight: 700;
+    margin: 0;
+  `;
+
+  const SectionCard = styled.div`
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+    border: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+    &:hover { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); }
+  `;
+
+  const SectionTitle = styled.h3`
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid;
+    border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1;
+  `;
+
+  const Button = styled.button`
+    background: ${props => props.variant === 'primary' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
+      props.variant === 'success' ? 'linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)' :
+      props.variant === 'danger' ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' :
+      props.variant === 'warning' ? 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)' :
+      '#f0f0f0'};
+    color: ${props => props.variant === 'secondary' ? '#333' : 'white'};
+    border: none;
+    padding: ${props => props.size === 'small' ? '0.5rem 1rem' : props.size === 'large' ? '1rem 2rem' : '0.75rem 1.5rem'};
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: ${props => props.size === 'small' ? '0.9rem' : props.size === 'large' ? '1.1rem' : '1rem'};
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    &:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+    &:active { transform: translateY(0); }
+    &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  `;
+
+  const HeaderActions = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  `;
+
+  const EmptyState = styled.div`
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+    font-style: italic;
+  `;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -846,9 +998,7 @@ const TeacherDashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div>Loading...</div>
-      </div>
+      <LoadingSpinner />
     );
   }
 
@@ -856,83 +1006,50 @@ const TeacherDashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
-  return (
+        return (
           <div>
-        <div style={{ marginBottom: '2rem' }}>
-              <h1 style={{ color: '#2e7d32', fontSize: '2.5rem', marginBottom: '0.5rem' }}>
-            Teacher Dashboard
-          </h1>
-          <p style={{ color: '#666', fontSize: '1.1rem' }}>
-            Welcome back, {user?.fullName}! Manage your courses and students.
-          </p>
-        </div>
-        
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '2rem',
-          maxWidth: '1200px',
-          margin: '0 auto'
-        }}>
-          {/* Stats Cards */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-                <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>My Students</h3>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4caf50' }}>24</div>
-          </div>
+            <div style={{ marginBottom: '2rem' }}>
+              <PageTitle>Teacher Dashboard</PageTitle>
+              <PageSubtitle>
+                Welcome back, {user?.fullName}! Manage your courses and students.
+              </PageSubtitle>
+            </div>
+            
+            <StatsGrid>
+              <StatCard color1="#56ab2f" color2="#a8e063">
+                <StatTitle>My Students</StatTitle>
+                <StatValue>24</StatValue>
+              </StatCard>
 
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-                <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>My Courses</h3>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#9c27b0' }}>{courses.length}</div>
-          </div>
+              <StatCard color1="#f6d365" color2="#fda085">
+                <StatTitle>My Courses</StatTitle>
+                <StatValue>{courses.length}</StatValue>
+              </StatCard>
 
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-                <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>Assignments</h3>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f44336' }}>{assignments.length}</div>
-          </div>
+              <StatCard color1="#667eea" color2="#764ba2">
+                <StatTitle>Assignments</StatTitle>
+                <StatValue>{assignments.length}</StatValue>
+              </StatCard>
+            </StatsGrid>
 
-              {/* Recent Activity */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            gridColumn: '1 / -1'
-          }}>
-                <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>Recent Activity</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    📚 <strong>New course created:</strong> "Cloud Computing Fundamentals" - 2 modules added
-                  </div>
-                  <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    📝 <strong>Assignment posted:</strong> "React Component Project" - Due Feb 20, 2024
-                  </div>
-                  <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    🎥 <strong>Video uploaded:</strong> "What is Cloud Computing?" - 15:30 duration
-                  </div>
-                  <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                    👥 <strong>Student enrolled:</strong> John Doe joined "React Development" course
-                  </div>
+            {/* Recent Activity */}
+            <SectionCard>
+              <SectionTitle>Recent Activity</SectionTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                  📚 <strong>New course created:</strong> "Cloud Computing Fundamentals" - 2 modules added
+                </div>
+                <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                  📝 <strong>Assignment posted:</strong> "React Component Project" - Due Feb 20, 2024
+                </div>
+                <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                  🎥 <strong>Video uploaded:</strong> "What is Cloud Computing?" - 15:30 duration
+                </div>
+                <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                  👥 <strong>Student enrolled:</strong> John Doe joined "React Development" course
                 </div>
               </div>
-            </div>
+            </SectionCard>
           </div>
         );
       
@@ -2178,26 +2295,23 @@ const TeacherDashboard = () => {
     }
   };
 
+  
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <DashboardContainer>
       {/* Sidebar */}
-      <TeacherSidebar 
+      <TeacherSidebar
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         user={user}
         onLogout={handleLogout}
       />
-      
+
       {/* Main Content */}
-      <div style={{ 
-        marginLeft: '250px', 
-        flex: 1, 
-        padding: '2rem',
-        overflow: 'auto'
-      }}>
+      <ContentWrapper>
         {renderContent()}
-      </div>
-    </div>
+      </ContentWrapper>
+    </DashboardContainer>
   );
 };
 

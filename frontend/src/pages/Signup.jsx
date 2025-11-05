@@ -140,7 +140,7 @@ const SignupPage = () => {
         fullName: '',
         email: '',
         password: '',
-        role: 'student'
+        role: 'Student'
     });
     const [loader, setLoader] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
@@ -302,18 +302,15 @@ const SignupPage = () => {
                                 />
                             </label>
 
-                            {/* Role Selection Field */}
+                            {/* Role (Prefilled as Student) */}
                             <label style={{ display: 'block', position: 'relative' }}>
-                                <select 
+                                <input
+                                    type="text"
                                     name="role"
                                     value={form.role}
-                                    style={styles.select}
-                                    onChange={handleInputChange}
-                                >
-                                    <option value="student">Student</option>
-                                    <option value="teacher">Teacher</option>
-                                    <option value="admin">Admin</option>
-                                </select>
+                                    style={styles.input}
+                                    readOnly
+                                />
                             </label>
 
                             {/* Email Field */}
