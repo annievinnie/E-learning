@@ -12,6 +12,7 @@ import Navbar from "./components/Navbar";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
+import TeacherApplicationForm from "./pages/TeacherApplicationForm";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/course/:id" element={<CourseDetailPage />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/teacher-application" element={<TeacherApplicationForm />} />
       </Routes>
     </BrowserRouter>
   );

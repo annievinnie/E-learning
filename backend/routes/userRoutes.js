@@ -6,6 +6,7 @@ import {
   forgotPassword, 
   resetPassword, 
   getUserProfile,
+  submitTeacherApplication,
   getPendingTeacherApplications,
   approveTeacherApplication,
   rejectTeacherApplication,
@@ -42,6 +43,17 @@ router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", verifyToken, getUserProfile);
+
+// Public teacher application route
+router.post("/teacher/apply", (req, res, next) => {
+  console.log("=== TEACHER APPLICATION ROUTE HIT ===");
+  console.log("Method:", req.method);
+  console.log("Path:", req.path);
+  console.log("Original URL:", req.originalUrl);
+  console.log("Request body:", req.body);
+  console.log("=====================================");
+  next();
+}, submitTeacherApplication);
 
 // Admin routes for teacher application management
 router.get("/admin/pending-teachers", verifyToken, getPendingTeacherApplications);
