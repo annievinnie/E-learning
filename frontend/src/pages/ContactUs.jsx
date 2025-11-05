@@ -24,9 +24,12 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: 'white',
-    fontSize: '2rem',
-    fontWeight: 'bold',
+    overflow: 'hidden',
+  },
+  imageStyle: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
   },
   formBox: {
     width: '100%',
@@ -226,7 +229,7 @@ export default function ContactUsPage() {
         <div style={styles.formBox}>
           <h2 style={{ color: '#1a237e', marginBottom: '8px' }}>Contact Us</h2>
           <p style={{ color: '#757575', marginBottom: '20px' }}>
-            We'd love to hire you! Send us a message and we'll respond as soon as possible.
+            We'd love to here you! Send us a message and we'll respond as soon as possible.
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -291,13 +294,15 @@ export default function ContactUsPage() {
 
       {/* Right Background Section */}
       <div style={styles.backgroundSection}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📧</div>
-          <div>Get in Touch</div>
-          <div style={{ fontSize: '1rem', marginTop: '10px', opacity: 0.9 }}>
-            If you want to be a teahcer in our platform, you can contact us.
-          </div>
-        </div>
+        <img
+          src="/images/contactUs.jpeg"
+          alt="Contact Us"
+          style={styles.imageStyle}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.parentElement.innerHTML = '<div style="color: white; font-size: 2rem; font-weight: bold; padding: 20px; text-align: center;">Get in Touch</div>';
+          }}
+        />
       </div>
 
       {/* Popup Message */}

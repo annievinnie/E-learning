@@ -112,8 +112,13 @@ const Navbar = () => {
     return null;
   }
 
+  // Check if we're on a dashboard page (to adjust navbar positioning)
+  const isDashboardPage = location.pathname === '/AdminDashboard' || 
+                          location.pathname === '/TeacherDashboard' || 
+                          location.pathname === '/StudentDashboard';
+
   return (
-    <NavbarContainer>
+    <NavbarContainer isDashboard={isDashboardPage}>
       <NavbarContent>
         <Logo onClick={handleHome}>
           <LogoIcon>🎓</LogoIcon>
@@ -228,9 +233,11 @@ export default Navbar;
 const NavbarContainer = styled.nav`
   background: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 999;
+  position: sticky;
+  margin-left: ${props => props.isDashboard ? '280px' : '0'};
+  transition: margin-left 0.3s ease;
 `;
 
 const NavbarContent = styled.div`

@@ -269,6 +269,119 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
+// Submit detailed teacher application (Public route)
+export const submitTeacherApplication = async (req, res) => {
+  try {
+    const { fullName, age, email, phone, teachingExperience, coursesKnown, confidenceLevel } = req.body;
+
+    console.log('Received application data:', { fullName, age, email, phone, teachingExperience, coursesKnown, confidenceLevel });
+
+    // Validation with detailed error messages
+    if (!fullName || fullName.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Full name is required." 
+      });
+    }
+    if (!age || age === '' || isNaN(age) || parseInt(age) <= 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Valid age is required." 
+      });
+    }
+    if (!email || email.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Email is required." 
+      });
+    }
+    if (!phone || phone.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Phone number is required." 
+      });
+    }
+    if (!teachingExperience || teachingExperience.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Teaching experience is required." 
+      });
+    }
+    if (!Array.isArray(coursesKnown) || coursesKnown.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Please provide at least one course." 
+      });
+    }
+    if (!confidenceLevel || confidenceLevel.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Confidence level is required." 
+      });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Email already registered." 
+      });
+    }
+
+    // Check if email already has a pending application
+    const existingApplication = await TeacherApplication.findOne({ email, status: 'pending' });
+    if (existingApplication) {
+      return res.status(400).json({ 
+        success: false,
+        message: "You already have a pending application." 
+      });
+    }
+
+    // Create teacher application
+    const teacherApplication = new TeacherApplication({
+      fullName: fullName.trim(),
+      age: parseInt(age),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      teachingExperience: teachingExperience.trim(),
+      coursesKnown: coursesKnown.map(c => c.trim()).filter(c => c.length > 0),
+      confidenceLevel: confidenceLevel.trim(),
+      status: "pending"
+    });
+
+    await teacherApplication.save();
+    console.log('Teacher application saved successfully:', teacherApplication._id);
+
+    res.status(201).json({ 
+      success: true,
+      message: "Application submitted successfully! Admin will contact you shortly."
+    });
+  } catch (error) {
+    console.error("=== SUBMIT TEACHER APPLICATION ERROR ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    console.error("Error code:", error.code);
+    console.error("Full error object:", error);
+    console.error("=========================================");
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Email already has an application." 
+      });
+    }
+    
+    // More detailed error message
+    const errorMessage = error.message || "Server error. Please try again later.";
+    res.status(500).json({ 
+      success: false,
+      message: errorMessage
+    });
+  }
+};
+
 // Get all pending teacher applications (Admin only)
 export const getPendingTeacherApplications = async (req, res) => {
   try {
@@ -310,10 +423,18 @@ export const approveTeacherApplication = async (req, res) => {
     }
 
     // Create the actual user account
+    // If password exists (from signup), use it; otherwise generate a temporary one
+    let password = application.password;
+    if (!password) {
+      // Generate a temporary password for detailed applications
+      const tempPassword = crypto.randomBytes(8).toString('hex');
+      password = await bcrypt.hash(tempPassword, 10);
+    }
+
     const newUser = new User({
       fullName: application.fullName,
       email: application.email,
-      password: application.password, // Already hashed
+      password: password, // Already hashed or newly hashed
       role: "teacher",
       isApproved: true,
     });
