@@ -6,7 +6,17 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/login');
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    
+    // If student is logged in, go to student dashboard
+    if (token && role === 'student') {
+      navigate('/StudentDashboard');
+    } else {
+      // Otherwise, go to login page
+      navigate('/login');
+    }
   };
 
   const handleSignUp = () => {
