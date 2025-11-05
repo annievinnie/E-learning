@@ -3,7 +3,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 
 // API function for reset password
 const resetPasswordAPI = async (token, password) => {
-    const response = await fetch('http://localhost:5000/api/reset-password', {
+    const response = await fetch('http://localhost:5001/api/reset-password', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
