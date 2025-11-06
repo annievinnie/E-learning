@@ -150,7 +150,7 @@ const TeacherApplicationForm = () => {
         }
       } else if (err.request) {
         // Request was made but no response received
-        errorMessage = 'Network error: Could not connect to the server. Please make sure the backend server is running on http://localhost:5000';
+        errorMessage = 'Network error: Could not connect to the server. Please make sure the backend server is running on http://localhost:5001';
       } else {
         // Something else happened
         errorMessage = `Error: ${err.message || 'Unknown error occurred'}`;

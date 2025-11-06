@@ -268,18 +268,88 @@ export const getUserProfile = async (req, res) => {
 
     res.status(200).json({ 
       message: "Profile retrieved successfully.",
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        isApproved: user.isApproved,
-        createdAt: user.createdAt
-      }
+      user: user.toObject()
     });
   } catch (error) {
     console.error("Get profile error:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+// Update user profile
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const {
+      fullName,
+      phone,
+      age,
+      bio,
+      address,
+      city,
+      state,
+      country,
+      zipCode,
+      profilePicture,
+      teachingExperience,
+      coursesKnown,
+      confidenceLevel,
+      qualifications,
+      interests,
+      department
+    } = req.body;
+
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found." 
+      });
+    }
+
+    // Update allowed fields
+    if (fullName !== undefined) user.fullName = fullName;
+    if (phone !== undefined) user.phone = phone;
+    if (age !== undefined) user.age = age;
+    if (bio !== undefined) user.bio = bio;
+    if (address !== undefined) user.address = address;
+    if (city !== undefined) user.city = city;
+    if (state !== undefined) user.state = state;
+    if (country !== undefined) user.country = country;
+    if (zipCode !== undefined) user.zipCode = zipCode;
+    if (profilePicture !== undefined) user.profilePicture = profilePicture;
+    
+    // Role-specific fields
+    if (user.role === 'teacher') {
+      if (teachingExperience !== undefined) user.teachingExperience = teachingExperience;
+      if (coursesKnown !== undefined && Array.isArray(coursesKnown)) user.coursesKnown = coursesKnown;
+      if (confidenceLevel !== undefined) user.confidenceLevel = confidenceLevel;
+      if (qualifications !== undefined) user.qualifications = qualifications;
+    }
+    
+    if (user.role === 'student') {
+      if (interests !== undefined && Array.isArray(interests)) user.interests = interests;
+    }
+    
+    if (user.role === 'admin') {
+      if (department !== undefined) user.department = department;
+    }
+
+    await user.save();
+
+    const updatedUser = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+
+    res.status(200).json({ 
+      success: true,
+      message: "Profile updated successfully.",
+      user: updatedUser.toObject()
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error. Please try again later." 
+    });
   }
 };
 
