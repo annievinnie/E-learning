@@ -6,6 +6,7 @@ import {
   forgotPassword, 
   resetPassword, 
   getUserProfile,
+  updateProfile,
   submitTeacherApplication,
   getPendingTeacherApplications,
   approveTeacherApplication,
@@ -51,6 +52,7 @@ router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", verifyToken, getUserProfile);
+router.put("/profile", verifyToken, updateProfile);
 
 // Public teacher application route
 router.post("/teacher/apply", (req, res, next) => {
@@ -74,5 +76,6 @@ router.get("/admin/teachers", verifyToken, getAllTeachers);
 router.post("/admin/teachers", verifyToken, createTeacher);
 router.put("/admin/teachers/:teacherId", verifyToken, updateTeacher);
 router.delete("/admin/teachers/:teacherId", verifyToken, deleteTeacher);
+//router.post("/admin/teachers/:teacherId/set-password", verifyToken, verifyAdmin, setTeacherPassword);
 
 export default router;
