@@ -9,6 +9,10 @@ import ForgetPassword from "./pages/ForgetPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ContactUs from "./pages/ContactUs";
 import Navbar from "./components/Navbar";
+import CourseDetailPage from "./pages/CourseDetailPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
+import TeacherApplicationForm from "./pages/TeacherApplicationForm";
 
 function App() {
   return (
@@ -24,6 +28,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgetPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/contact" element={<ContactUs />} />
+        <Route path="/course/:id" element={<CourseDetailPage />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/teacher-application" element={<TeacherApplicationForm />} />
       </Routes>
     </BrowserRouter>
   );
