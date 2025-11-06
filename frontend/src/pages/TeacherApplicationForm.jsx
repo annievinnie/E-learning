@@ -93,7 +93,7 @@ const TeacherApplicationForm = () => {
       console.log('API base URL:', API.defaults?.baseURL);
       
       // Explicitly use full URL to ensure it reaches the backend on port 5000
-      const backendUrl = 'http://localhost:5000/api/teacher/apply';
+      const backendUrl = 'http://localhost:5001/api/teacher/apply';
       console.log('Making request to:', backendUrl);
       console.log('Request data:', JSON.stringify(formData, null, 2));
       
@@ -150,7 +150,7 @@ const TeacherApplicationForm = () => {
         }
       } else if (err.request) {
         // Request was made but no response received
-        errorMessage = 'Network error: Could not connect to the server. Please make sure the backend server is running on http://localhost:5000';
+        errorMessage = 'Network error: Could not connect to the server. Please make sure the backend server is running on http://localhost:5001';
       } else {
         // Something else happened
         errorMessage = `Error: ${err.message || 'Unknown error occurred'}`;

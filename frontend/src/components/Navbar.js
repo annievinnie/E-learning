@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import API from '../api';
+import StudentProfile from './profile/StudentProfile';
+import TeacherProfile from './profile/TeacherProfile';
+import AdminProfile from './profile/AdminProfile';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -9,6 +12,10 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
+  const dropdownRef = useRef(null);
+  const avatarRef = useRef(null);
 
   useEffect(() => {
     const checkAuthStatus = () => {
@@ -24,7 +31,7 @@ const Navbar = () => {
         });
         setIsLoggedIn(true);
         
-        // Optionally fetch fresh profile data in background
+        // Fetch fresh profile data in background
         API.get('/profile')
           .then(response => {
             setUser(response.data.user);
@@ -64,6 +71,28 @@ const Navbar = () => {
     };
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        avatarRef.current &&
+        !avatarRef.current.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    if (showProfileDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileDropdown]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
@@ -102,6 +131,32 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
+  const handleProfileClick = () => {
+    setShowProfileSidebar(true);
+    setShowProfileDropdown(false);
+    setIsMenuOpen(false); // Close mobile menu if open
+    // Fetch fresh profile data when opening sidebar
+    API.get('/profile')
+      .then(response => {
+        setUser(response.data.user);
+      })
+      .catch(error => {
+        console.error('Error fetching profile:', error);
+      });
+  };
+
+  const handleProfileUpdate = (updatedUser) => {
+    setUser(updatedUser);
+    if (updatedUser.fullName) {
+      localStorage.setItem('name', updatedUser.fullName);
+    }
+    window.dispatchEvent(new CustomEvent('authStateChanged'));
+  };
+
+  const handleCloseProfileSidebar = () => {
+    setShowProfileSidebar(false);
+  };
+
   const handleContact = () => {
     navigate('/contact');
     setIsMenuOpen(false);
@@ -112,45 +167,32 @@ const Navbar = () => {
     return null;
   }
 
-  // Check if we're on a dashboard page (to adjust navbar positioning)
-  const isDashboardPage = location.pathname === '/AdminDashboard' || 
-                          location.pathname === '/TeacherDashboard' || 
-                          location.pathname === '/StudentDashboard';
-  
-  // Check if we're on student dashboard for purple styling
-  const isStudentDashboard = location.pathname === '/StudentDashboard';
+  // Check if we're on a dashboard page with sidebar (to adjust navbar positioning)
+  // StudentDashboard doesn't have a sidebar, so we don't add margin for it
+  const isDashboardWithSidebar = location.pathname === '/AdminDashboard' || 
+                                  location.pathname === '/TeacherDashboard';
 
   return (
-    <NavbarContainer isDashboard={isDashboardPage} isStudentDashboard={isStudentDashboard}>
-      <NavbarContent isStudentDashboard={isStudentDashboard}>
-        <Logo onClick={handleHome} isStudentDashboard={isStudentDashboard}>
-          <LogoIcon isStudentDashboard={isStudentDashboard}>🎓</LogoIcon>
-          <LogoText isStudentDashboard={isStudentDashboard}>E-Learning</LogoText>
+    <NavbarContainer isDashboard={isDashboardWithSidebar}>
+      <NavbarContent>
+        <Logo onClick={handleHome}>
+          <LogoIcon>🎓</LogoIcon>
+          <LogoText>E-Learning</LogoText>
         </Logo>
 
         <NavLinks>
-          <NavLink 
-            onClick={handleHome} 
-            active={location.pathname === '/'}
-            isStudentDashboard={isStudentDashboard}
-          >
+          <NavLink onClick={handleHome} active={location.pathname === '/'}>
             Home
           </NavLink>
           
-          <NavLink 
-            onClick={handleContact} 
-            active={location.pathname === '/contact'}
-            isStudentDashboard={isStudentDashboard}
-          >
+          <NavLink onClick={handleContact} active={location.pathname === '/contact'}>
             Contact Us
           </NavLink>
           
           {isLoggedIn && (
-            <NavLink 
-              onClick={handleDashboard} 
-              active={location.pathname.includes('/dashboard')}
-              isStudentDashboard={isStudentDashboard}
-            >
+            <NavLink onClick={handleDashboard} active={
+              location.pathname.includes('/dashboard')
+            }>
               Dashboard
             </NavLink>
           )}
@@ -158,26 +200,47 @@ const Navbar = () => {
 
         <UserSection>
           {isLoggedIn ? (
-            <UserMenu>
-              <UserInfo>
-                <UserAvatar isStudentDashboard={isStudentDashboard}>
-                  {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
-                </UserAvatar>
-                <UserDetails>
-                  <UserName isStudentDashboard={isStudentDashboard}>{user?.fullName}</UserName>
-                  <UserRole isStudentDashboard={isStudentDashboard}>{user?.role}</UserRole>
-                </UserDetails>
-              </UserInfo>
-              <LogoutButton onClick={handleLogout} isStudentDashboard={isStudentDashboard}>
-                Logout
-              </LogoutButton>
-            </UserMenu>
+            <AvatarContainer>
+              <AvatarButton
+                ref={avatarRef}
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                onMouseEnter={() => setShowProfileDropdown(true)}
+                hasImage={!!user?.profilePicture}
+              >
+                {user?.profilePicture ? (
+                  <AvatarImage src={user.profilePicture} alt={user?.fullName} />
+                ) : (
+                  <AvatarText>
+                    {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarText>
+                )}
+              </AvatarButton>
+              
+              {showProfileDropdown && (
+                <DropdownMenu ref={dropdownRef} onMouseLeave={() => setShowProfileDropdown(false)}>
+                  <DropdownItem onClick={handleProfileClick}>
+                    <DropdownIcon>👤</DropdownIcon>
+                    Profile
+                  </DropdownItem>
+                  <DropdownDivider />
+                  <DropdownItem onClick={handleDashboard}>
+                    <DropdownIcon>📊</DropdownIcon>
+                    Dashboard
+                  </DropdownItem>
+                  <DropdownDivider />
+                  <DropdownItem onClick={handleLogout}>
+                    <DropdownIcon>🚪</DropdownIcon>
+                    Logout
+                  </DropdownItem>
+                </DropdownMenu>
+              )}
+            </AvatarContainer>
           ) : (
             <AuthButtons>
-              <LoginButton onClick={handleLogin} isStudentDashboard={isStudentDashboard}>
+              <LoginButton onClick={handleLogin}>
                 Login
               </LoginButton>
-              <SignupButton onClick={handleSignup} isStudentDashboard={isStudentDashboard}>
+              <SignupButton onClick={handleSignup}>
                 Sign Up
               </SignupButton>
             </AuthButtons>
@@ -185,82 +248,76 @@ const Navbar = () => {
         </UserSection>
 
         {/* Mobile Menu Button */}
-        <MobileMenuButton 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          isStudentDashboard={isStudentDashboard}
-        >
+        <MobileMenuButton onClick={() => setIsMenuOpen(!isMenuOpen)}>
           ☰
         </MobileMenuButton>
       </NavbarContent>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <MobileMenu isStudentDashboard={isStudentDashboard}>
-          <MobileNavLink 
-            onClick={handleHome} 
-            active={location.pathname === '/'}
-            isStudentDashboard={isStudentDashboard}
-          >
+        <MobileMenu>
+          <MobileNavLink onClick={handleHome} active={location.pathname === '/'}>
             Home
           </MobileNavLink>
           
-          <MobileNavLink 
-            onClick={handleContact} 
-            active={location.pathname === '/contact'}
-            isStudentDashboard={isStudentDashboard}
-          >
+          <MobileNavLink onClick={handleContact} active={location.pathname === '/contact'}>
             Contact Us
           </MobileNavLink>
           
           {isLoggedIn && (
-            <MobileNavLink 
-              onClick={handleDashboard} 
-              active={location.pathname.includes('/dashboard')}
-              isStudentDashboard={isStudentDashboard}
-            >
+            <MobileNavLink onClick={handleDashboard} active={
+              location.pathname.includes('/dashboard')
+            }>
               Dashboard
             </MobileNavLink>
           )}
 
           {isLoggedIn ? (
-            <MobileUserSection isStudentDashboard={isStudentDashboard}>
-              <MobileUserInfo>
-                <MobileUserAvatar isStudentDashboard={isStudentDashboard}>
-                  {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
-                </MobileUserAvatar>
-                <MobileUserDetails>
-                  <MobileUserName isStudentDashboard={isStudentDashboard}>
-                    {user?.fullName}
-                  </MobileUserName>
-                  <MobileUserRole isStudentDashboard={isStudentDashboard}>
-                    {user?.role}
-                  </MobileUserRole>
-                </MobileUserDetails>
-              </MobileUserInfo>
-              <MobileLogoutButton 
-                onClick={handleLogout}
-                isStudentDashboard={isStudentDashboard}
-              >
+            <MobileUserSection>
+              <MobileNavLink onClick={handleProfileClick}>
+                👤 Profile
+              </MobileNavLink>
+              <MobileNavLink onClick={handleDashboard}>
+                📊 Dashboard
+              </MobileNavLink>
+              <MobileLogoutButton onClick={handleLogout}>
                 Logout
               </MobileLogoutButton>
             </MobileUserSection>
           ) : (
             <MobileAuthButtons>
-              <MobileLoginButton 
-                onClick={handleLogin}
-                isStudentDashboard={isStudentDashboard}
-              >
+              <MobileLoginButton onClick={handleLogin}>
                 Login
               </MobileLoginButton>
-              <MobileSignupButton 
-                onClick={handleSignup}
-                isStudentDashboard={isStudentDashboard}
-              >
+              <MobileSignupButton onClick={handleSignup}>
                 Sign Up
               </MobileSignupButton>
             </MobileAuthButtons>
           )}
         </MobileMenu>
+      )}
+
+      {/* Profile Sidebar */}
+      {showProfileSidebar && (
+        <ProfileSidebarOverlay onClick={handleCloseProfileSidebar}>
+          <ProfileSidebar onClick={(e) => e.stopPropagation()}>
+            <ProfileSidebarHeader>
+              <ProfileSidebarTitle>My Profile</ProfileSidebarTitle>
+              <CloseButton onClick={handleCloseProfileSidebar}>×</CloseButton>
+            </ProfileSidebarHeader>
+            <ProfileSidebarContent>
+              {user?.role === 'student' && (
+                <StudentProfile user={user} onUpdate={handleProfileUpdate} />
+              )}
+              {user?.role === 'teacher' && (
+                <TeacherProfile user={user} onUpdate={handleProfileUpdate} />
+              )}
+              {user?.role === 'admin' && (
+                <AdminProfile user={user} onUpdate={handleProfileUpdate} />
+              )}
+            </ProfileSidebarContent>
+          </ProfileSidebar>
+        </ProfileSidebarOverlay>
       )}
     </NavbarContainer>
   );
@@ -270,83 +327,50 @@ export default Navbar;
 
 // Styled Components
 const NavbarContainer = styled.nav`
-  background: ${props => props.isStudentDashboard 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'white'};
-  box-shadow: ${props => props.isStudentDashboard 
-    ? '0 4px 20px rgba(0, 0, 0, 0.15)' 
-    : '0 2px 10px rgba(0, 0, 0, 0.1)'};
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   top: 0;
   z-index: 999;
   position: sticky;
-  width: 100%;
-  transition: all 0.3s ease;
+  margin-left: ${props => props.isDashboard ? '280px' : '0'};
+  transition: margin-left 0.3s ease;
 `;
 
 const NavbarContent = styled.div`
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 75px;
-  gap: 2rem;
-  
-  @media (max-width: 768px) {
-    padding: 0 1rem;
-    height: 70px;
-  }
+  height: 70px;
 `;
 
 const Logo = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
   cursor: pointer;
   transition: transform 0.3s ease;
-  flex-shrink: 0;
 
   &:hover {
     transform: scale(1.05);
   }
 `;
 
-const LogoIcon = styled.div`
+const LogoIcon = styled.span`
   font-size: 2rem;
-  filter: ${props => props.isStudentDashboard 
-    ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
-    : 'none'};
-  animation: ${props => props.isStudentDashboard ? 'float 3s ease-in-out infinite' : 'none'};
-  
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-  }
+  margin-right: 0.5rem;
 `;
 
-const LogoText = styled.div`
-  font-size: ${props => props.isStudentDashboard ? '1.6rem' : '1.5rem'};
-  font-weight: 700;
-  color: ${props => props.isStudentDashboard ? 'transparent' : '#667eea'};
-  background: ${props => props.isStudentDashboard 
-    ? 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)' 
-    : 'none'};
-  -webkit-background-clip: ${props => props.isStudentDashboard ? 'text' : 'unset'};
-  -webkit-text-fill-color: ${props => props.isStudentDashboard ? 'transparent' : '#667eea'};
-  background-clip: ${props => props.isStudentDashboard ? 'text' : 'unset'};
-  letter-spacing: ${props => props.isStudentDashboard ? '-0.5px' : '0'};
-  text-shadow: ${props => props.isStudentDashboard 
-    ? '0 2px 10px rgba(255, 255, 255, 0.3)' 
-    : 'none'};
+const LogoText = styled.span`
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #667eea;
 `;
 
 const NavLinks = styled.div`
   display: flex;
-  align-items: center;
   gap: 2rem;
-  flex: 1;
-  justify-content: center;
 
   @media (max-width: 768px) {
     display: none;
@@ -356,30 +380,21 @@ const NavLinks = styled.div`
 const NavLink = styled.button`
   background: none;
   border: none;
-  color: ${props => {
-    if (props.isStudentDashboard) {
-      return props.active ? '#ffffff' : 'rgba(255, 255, 255, 0.9)';
-    }
-    return props.active ? '#667eea' : '#333';
-  }};
+  color: ${props => props.active ? '#667eea' : '#333'};
   font-size: 1rem;
-  font-weight: ${props => props.active ? '600' : '500'};
+  font-weight: ${props => props.active ? '600' : '400'};
   cursor: pointer;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 5px;
   transition: all 0.3s ease;
   position: relative;
-  white-space: nowrap;
 
   &:hover {
-    color: ${props => props.isStudentDashboard ? '#ffffff' : '#667eea'};
-    background: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.15)' 
-      : '#f8f9fa'};
-    transform: translateY(-2px);
+    color: #667eea;
+    background: #f8f9fa;
   }
 
-  ${props => props.active && !props.isStudentDashboard && `
+  ${props => props.active && `
     &::after {
       content: '';
       position: absolute;
@@ -391,210 +406,249 @@ const NavLink = styled.button`
       background: #667eea;
     }
   `}
-  
-  ${props => props.active && props.isStudentDashboard && `
-    background: rgba(255, 255, 255, 0.2);
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -5px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 30px;
-      height: 3px;
-      background: #ffffff;
-      border-radius: 2px;
-    }
-  `}
 `;
 
 const UserSection = styled.div`
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  position: relative;
 
   @media (max-width: 768px) {
     display: none;
   }
 `;
 
-const UserMenu = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+const AvatarContainer = styled.div`
+  position: relative;
 `;
 
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-`;
-
-const UserAvatar = styled.div`
+const AvatarButton = styled.button`
   width: 45px;
   height: 45px;
   border-radius: 50%;
-  background: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.2)' 
-    : '#667eea'};
-  color: ${props => props.isStudentDashboard ? '#ffffff' : 'white'};
+  border: 2px solid #667eea;
+  background: ${props => props.hasImage ? 'transparent' : '#667eea'};
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   font-size: 1.1rem;
-  border: ${props => props.isStudentDashboard 
-    ? '2px solid rgba(255, 255, 255, 0.3)' 
-    : 'none'};
-  box-shadow: ${props => props.isStudentDashboard 
-    ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-    : 'none'};
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: ${props => props.isStudentDashboard 
-      ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-      : 'none'};
-  }
-`;
-
-const UserDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-`;
-
-const UserName = styled.span`
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: ${props => props.isStudentDashboard ? '#ffffff' : '#333'};
-  white-space: nowrap;
-`;
-
-const UserRole = styled.span`
-  font-size: 0.75rem;
-  color: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.8)' 
-    : '#666'};
-  text-transform: capitalize;
-  white-space: nowrap;
-`;
-
-const LogoutButton = styled.button`
-  background: ${props => props.isStudentDashboard 
-    ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(211, 47, 47, 0.9) 100%)' 
-    : '#ff6b6b'};
-  color: white;
-  border: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.2)' 
-    : 'none'};
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: ${props => props.isStudentDashboard 
-    ? '0 4px 15px rgba(244, 67, 54, 0.3)' 
-    : 'none'};
-  position: relative;
+  padding: 0;
   overflow: hidden;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-  }
-
   &:hover {
-    background: ${props => props.isStudentDashboard 
-      ? 'linear-gradient(135deg, rgba(244, 67, 54, 1) 0%, rgba(211, 47, 47, 1) 100%)' 
-      : '#ff5252'};
-    transform: translateY(-2px);
-    box-shadow: ${props => props.isStudentDashboard 
-      ? '0 6px 20px rgba(244, 67, 54, 0.5)' 
-      : '0 4px 12px rgba(255, 82, 82, 0.4)'};
-    
-    &::before {
-      width: 300px;
-      height: 300px;
-    }
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    border-color: #5a6fd8;
   }
 
   &:active {
-    transform: translateY(0) scale(0.98);
+    transform: scale(1.05);
   }
+`;
+
+const AvatarImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+`;
+
+const AvatarText = styled.span`
+  user-select: none;
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  padding: 0.5rem 0;
+  z-index: 1000;
+  animation: slideDown 0.3s ease;
+  overflow: hidden;
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const DropdownItem = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #333;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f8f9fa;
+    color: #667eea;
+  }
+
+  &:active {
+    background: #e9ecef;
+  }
+`;
+
+const DropdownIcon = styled.span`
+  font-size: 1.1rem;
+  width: 24px;
+  text-align: center;
+`;
+
+const DropdownDivider = styled.div`
+  height: 1px;
+  background: #e9ecef;
+  margin: 0.25rem 0;
+`;
+
+const ProfileSidebarOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+`;
+
+const ProfileSidebar = styled.div`
+  width: 600px;
+  max-width: 90vw;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s ease;
+  overflow-y: auto;
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 100vw;
+    max-width: 100vw;
+  }
+`;
+
+const ProfileSidebarHeader = styled.div`
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+`;
+
+const ProfileSidebarTitle = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+`;
+
+const CloseButton = styled.button`
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 2rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  line-height: 1;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+  }
+`;
+
+const ProfileSidebarContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
 `;
 
 const AuthButtons = styled.div`
   display: flex;
   gap: 1rem;
-  align-items: center;
 `;
 
 const LoginButton = styled.button`
-  background: ${props => props.isStudentDashboard 
-    ? 'transparent' 
-    : 'transparent'};
-  color: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.9)' 
-    : '#667eea'};
-  border: 2px solid ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.5)' 
-    : '#667eea'};
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+  background: transparent;
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 600;
   transition: all 0.3s ease;
 
   &:hover {
-    background: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.2)' 
-      : '#667eea'};
-    color: ${props => props.isStudentDashboard ? '#ffffff' : 'white'};
-    border-color: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.8)' 
-      : '#667eea'};
-    transform: translateY(-2px);
+    background: #667eea;
+    color: white;
   }
 `;
 
 const SignupButton = styled.button`
-  background: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.2)' 
-    : '#667eea'};
+  background: #667eea;
   color: white;
-  border: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.3)' 
-    : 'none'};
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: ${props => props.isStudentDashboard 
-    ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-    : 'none'};
+  transition: background 0.3s ease;
 
   &:hover {
-    background: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.3)' 
-      : '#5a6fd8'};
-    transform: translateY(-2px);
-    box-shadow: ${props => props.isStudentDashboard 
-      ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-      : '0 4px 12px rgba(102, 126, 234, 0.4)'};
+    background: #5a6fd8;
   }
 `;
 
@@ -604,8 +658,7 @@ const MobileMenuButton = styled.button`
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: ${props => props.isStudentDashboard ? '#ffffff' : '#333'};
-  flex-shrink: 0;
+  color: #333;
 
   @media (max-width: 768px) {
     display: block;
@@ -614,12 +667,8 @@ const MobileMenuButton = styled.button`
 
 const MobileMenu = styled.div`
   display: none;
-  background: ${props => props.isStudentDashboard 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'white'};
-  border-top: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.2)' 
-    : '1px solid #eee'};
+  background: white;
+  border-top: 1px solid #eee;
   padding: 1rem 2rem;
 
   @media (max-width: 768px) {
@@ -632,109 +681,73 @@ const MobileNavLink = styled.button`
   width: 100%;
   background: none;
   border: none;
-  color: ${props => {
-    if (props.isStudentDashboard) {
-      return props.active ? '#ffffff' : 'rgba(255, 255, 255, 0.9)';
-    }
-    return props.active ? '#667eea' : '#333';
-  }};
+  color: ${props => props.active ? '#667eea' : '#333'};
   font-size: 1rem;
-  font-weight: ${props => props.active ? '600' : '500'};
+  font-weight: ${props => props.active ? '600' : '400'};
   cursor: pointer;
   padding: 0.75rem 0;
   text-align: left;
-  border-bottom: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.1)' 
-    : '1px solid #f0f0f0'};
+  border-bottom: 1px solid #f0f0f0;
 
   &:hover {
-    color: ${props => props.isStudentDashboard ? '#ffffff' : '#667eea'};
-    background: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.1)' 
-      : 'transparent'};
+    color: #667eea;
   }
 `;
 
 const MobileUserSection = styled.div`
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.2)' 
-    : '1px solid #eee'};
+  border-top: 1px solid #eee;
 `;
 
 const MobileUserInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 `;
 
 const MobileUserAvatar = styled.div`
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.2)' 
-    : '#667eea'};
+  background: #667eea;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 1.1rem;
-  border: ${props => props.isStudentDashboard 
-    ? '2px solid rgba(255, 255, 255, 0.3)' 
-    : 'none'};
 `;
 
 const MobileUserDetails = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
 `;
 
 const MobileUserName = styled.span`
   font-weight: 600;
-  font-size: 0.95rem;
-  color: ${props => props.isStudentDashboard ? '#ffffff' : '#333'};
+  font-size: 0.9rem;
 `;
 
 const MobileUserRole = styled.span`
-  font-size: 0.75rem;
-  color: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.8)' 
-    : '#666'};
+  font-size: 0.8rem;
+  color: #666;
   text-transform: capitalize;
 `;
 
 const MobileLogoutButton = styled.button`
   width: 100%;
-  background: ${props => props.isStudentDashboard 
-    ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(211, 47, 47, 0.9) 100%)' 
-    : '#ff6b6b'};
+  background: #ff6b6b;
   color: white;
-  border: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.2)' 
-    : 'none'};
+  border: none;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: ${props => props.isStudentDashboard 
-    ? '0 4px 15px rgba(244, 67, 54, 0.3)' 
-    : 'none'};
+  transition: background 0.3s ease;
 
   &:hover {
-    background: ${props => props.isStudentDashboard 
-      ? 'linear-gradient(135deg, rgba(244, 67, 54, 1) 0%, rgba(211, 47, 47, 1) 100%)' 
-      : '#ff5252'};
-    transform: translateY(-2px);
-    box-shadow: ${props => props.isStudentDashboard 
-      ? '0 6px 20px rgba(244, 67, 54, 0.5)' 
-      : 'none'};
+    background: #ff5252;
   }
 `;
 
@@ -748,55 +761,32 @@ const MobileAuthButtons = styled.div`
 const MobileLoginButton = styled.button`
   width: 100%;
   background: transparent;
-  color: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.9)' 
-    : '#667eea'};
-  border: 2px solid ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.5)' 
-    : '#667eea'};
+  color: #667eea;
+  border: 2px solid #667eea;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 600;
   transition: all 0.3s ease;
 
   &:hover {
-    background: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.2)' 
-      : '#667eea'};
-    color: ${props => props.isStudentDashboard ? '#ffffff' : 'white'};
-    border-color: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.8)' 
-      : '#667eea'};
+    background: #667eea;
+    color: white;
   }
 `;
 
 const MobileSignupButton = styled.button`
   width: 100%;
-  background: ${props => props.isStudentDashboard 
-    ? 'rgba(255, 255, 255, 0.2)' 
-    : '#667eea'};
+  background: #667eea;
   color: white;
-  border: ${props => props.isStudentDashboard 
-    ? '1px solid rgba(255, 255, 255, 0.3)' 
-    : 'none'};
+  border: none;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: ${props => props.isStudentDashboard 
-    ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-    : 'none'};
+  transition: background 0.3s ease;
 
   &:hover {
-    background: ${props => props.isStudentDashboard 
-      ? 'rgba(255, 255, 255, 0.3)' 
-      : '#5a6fd8'};
-    box-shadow: ${props => props.isStudentDashboard 
-      ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-      : 'none'};
+    background: #5a6fd8;
   }
 `;
