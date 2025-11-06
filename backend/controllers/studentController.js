@@ -43,8 +43,8 @@ export const getAllCourses = async (req, res) => {
       description: course.description,
       instructor: course.teacher?.fullName || 'Unknown',
       instructorImage: '', // Can be added to User model later
-      thumbnail: course.thumbnail || '',
-      category: 'Development', // Can be added to Course model later
+      thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
+      category: course.category || 'Other',
       level: course.level.charAt(0).toUpperCase() + course.level.slice(1),
       rating: 4.5, // Can be added as reviews/ratings later
       reviewCount: 0,
@@ -106,12 +106,34 @@ export const getCourseDetails = async (req, res) => {
       student => student._id.toString() === userId.toString()
     );
     
+    // Format course data similar to getAllCourses for consistency
+    const formattedCourse = {
+      id: course._id,
+      title: course.title,
+      description: course.description,
+      instructor: course.teacher?.fullName || 'Unknown',
+      instructorImage: '', // Can be added to User model later
+      instructorEmail: course.teacher?.email || '',
+      thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
+      category: course.category || 'Other',
+      level: course.level.charAt(0).toUpperCase() + course.level.slice(1),
+      rating: 4.5, // Can be added as reviews/ratings later
+      reviewCount: 0,
+      reviews: 0,
+      students: course.students?.length || 0,
+      duration: course.duration,
+      lessons: course.modules?.reduce((acc, mod) => acc + (mod.videos?.length || 0), 0) || 0,
+      price: course.price || 0,
+      originalPrice: course.price ? course.price * 1.5 : 0,
+      bestseller: course.students?.length > 100,
+      createdAt: course.createdAt,
+      modules: course.modules || [],
+      isEnrolled
+    };
+    
     res.status(200).json({
       success: true,
-      course: {
-        ...course.toObject(),
-        isEnrolled
-      }
+      course: formattedCourse
     });
   } catch (error) {
     console.error('Get course details error:', error);

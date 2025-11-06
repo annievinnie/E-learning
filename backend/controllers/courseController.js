@@ -1,5 +1,12 @@
 import Course from '../models/Course.js';
 import User from '../models/User.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Get all courses for a teacher
 export const getTeacherCourses = async (req, res) => {
@@ -60,7 +67,7 @@ export const getCourseById = async (req, res) => {
 // Create a new course
 export const createCourse = async (req, res) => {
   try {
-    const { title, description, duration, level, price, thumbnail } = req.body;
+    const { title, description, duration, level, price, category } = req.body;
     const teacherId = req.user.userId || req.user.id;
 
     // Validation
@@ -80,13 +87,24 @@ export const createCourse = async (req, res) => {
       });
     }
 
+    // Handle thumbnail file upload
+    let thumbnailPath = '';
+    if (req.file) {
+      // File was uploaded, save the path
+      thumbnailPath = `/uploads/images/${req.file.filename}`;
+    } else if (req.body.thumbnail) {
+      // URL was provided instead of file
+      thumbnailPath = req.body.thumbnail;
+    }
+
     const course = new Course({
       title,
       description,
       duration,
       level: level || 'beginner',
+      category: category || 'Other',
       price: price || 0,
-      thumbnail: thumbnail || '',
+      thumbnail: thumbnailPath,
       teacher: teacherId,
       modules: [],
       students: [],
@@ -118,7 +136,7 @@ export const createCourse = async (req, res) => {
 export const updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, duration, level, status, price, thumbnail } = req.body;
+    const { title, description, duration, level, status, price, category } = req.body;
     const teacherId = req.user.userId || req.user.id;
 
     const course = await Course.findOne({ 
@@ -133,6 +151,27 @@ export const updateCourse = async (req, res) => {
       });
     }
 
+    // Handle thumbnail file upload - if new file uploaded, delete old one
+    if (req.file) {
+      // Delete old thumbnail if it exists and is a local file
+      if (course.thumbnail && course.thumbnail.startsWith('/uploads/images/')) {
+        const oldThumbnailPath = path.join(__dirname, '..', course.thumbnail);
+        if (fs.existsSync(oldThumbnailPath)) {
+          try {
+            fs.unlinkSync(oldThumbnailPath);
+            console.log('✅ Deleted old thumbnail:', oldThumbnailPath);
+          } catch (error) {
+            console.error('Error deleting old thumbnail:', error);
+          }
+        }
+      }
+      // Set new thumbnail path
+      course.thumbnail = `/uploads/images/${req.file.filename}`;
+    } else if (req.body.thumbnail !== undefined) {
+      // URL was provided or field is being cleared
+      course.thumbnail = req.body.thumbnail || '';
+    }
+
     // Update fields
     if (title) course.title = title;
     if (description) course.description = description;
@@ -140,7 +179,7 @@ export const updateCourse = async (req, res) => {
     if (level) course.level = level;
     if (status) course.status = status;
     if (price !== undefined) course.price = price;
-    if (thumbnail !== undefined) course.thumbnail = thumbnail;
+    if (category) course.category = category;
 
     await course.save();
 
@@ -337,7 +376,7 @@ export const deleteModule = async (req, res) => {
   }
 };
 
-// Add a video to a module
+// Add a video to a module (with file upload support)
 export const addVideoToModule = async (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
@@ -345,10 +384,19 @@ export const addVideoToModule = async (req, res) => {
     const teacherId = req.user.userId || req.user.id;
 
     // Validation
-    if (!title || !description || !duration || !videoUrl) {
+    if (!title || !description || !duration) {
       return res.status(400).json({
         success: false,
-        message: 'Video title, description, duration, and URL are required.'
+        message: 'Video title, description, and duration are required.'
+      });
+    }
+
+    // Check if video file is uploaded or videoUrl is provided
+    const videoFile = req.file;
+    if (!videoFile && !videoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either a video file or video URL is required.'
       });
     }
 
@@ -358,6 +406,13 @@ export const addVideoToModule = async (req, res) => {
     });
 
     if (!course) {
+      // If file was uploaded but course not found, delete the file
+      if (videoFile) {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', videoFile.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Course not found or you do not have permission to modify it.'
@@ -366,30 +421,57 @@ export const addVideoToModule = async (req, res) => {
 
     const module = course.modules.id(moduleId);
     if (!module) {
+      // If file was uploaded but module not found, delete the file
+      if (videoFile) {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', videoFile.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Module not found.'
       });
     }
 
+    // Build video data
     const newVideo = {
       title,
       description,
       duration,
       order: order || module.videos.length + 1,
-      videoUrl
+      videoPath: videoFile ? `/uploads/videos/${videoFile.filename}` : '',
+      videoUrl: videoUrl || ''
     };
 
     module.videos.push(newVideo);
     await course.save();
 
+    // Populate the course before returning
+    const populatedCourse = await Course.findById(course._id)
+      .populate('teacher', 'fullName email')
+      .populate('students', 'fullName email');
+
     res.status(201).json({
       success: true,
       message: 'Video added successfully.',
-      course: course
+      course: populatedCourse
     });
   } catch (error) {
     console.error('Add video error:', error);
+    
+    // Clean up uploaded file if error occurred
+    if (req.file) {
+      try {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', req.file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'
@@ -397,12 +479,13 @@ export const addVideoToModule = async (req, res) => {
   }
 };
 
-// Update a video
+// Update a video (with optional file upload support)
 export const updateVideo = async (req, res) => {
   try {
     const { courseId, moduleId, videoId } = req.params;
     const { title, description, duration, order, videoUrl } = req.body;
     const teacherId = req.user.userId || req.user.id;
+    const videoFile = req.file;
 
     const course = await Course.findOne({ 
       _id: courseId, 
@@ -410,6 +493,13 @@ export const updateVideo = async (req, res) => {
     });
 
     if (!course) {
+      // If file was uploaded but course not found, delete the file
+      if (videoFile) {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', videoFile.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Course not found or you do not have permission to modify it.'
@@ -418,6 +508,13 @@ export const updateVideo = async (req, res) => {
 
     const module = course.modules.id(moduleId);
     if (!module) {
+      // If file was uploaded but module not found, delete the file
+      if (videoFile) {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', videoFile.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Module not found.'
@@ -426,27 +523,72 @@ export const updateVideo = async (req, res) => {
 
     const video = module.videos.id(videoId);
     if (!video) {
+      // If file was uploaded but video not found, delete the file
+      if (videoFile) {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', videoFile.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Video not found.'
       });
     }
 
+    // Delete old video file if new one is being uploaded
+    if (videoFile && video.videoPath) {
+      try {
+        const oldFilePath = path.join(__dirname, '..', video.videoPath);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting old video file:', deleteError);
+      }
+    }
+
+    // Update fields
     if (title) video.title = title;
     if (description) video.description = description;
     if (duration) video.duration = duration;
     if (order) video.order = order;
-    if (videoUrl) video.videoUrl = videoUrl;
+    if (videoFile) {
+      video.videoPath = `/uploads/videos/${videoFile.filename}`;
+      video.videoUrl = ''; // Clear videoUrl if file is uploaded
+    }
+    if (videoUrl && !videoFile) {
+      video.videoUrl = videoUrl;
+      video.videoPath = ''; // Clear videoPath if URL is provided
+    }
 
     await course.save();
+
+    // Populate the course before returning
+    const populatedCourse = await Course.findById(course._id)
+      .populate('teacher', 'fullName email')
+      .populate('students', 'fullName email');
 
     res.status(200).json({
       success: true,
       message: 'Video updated successfully.',
-      course: course
+      course: populatedCourse
     });
   } catch (error) {
     console.error('Update video error:', error);
+    
+    // Clean up uploaded file if error occurred
+    if (req.file) {
+      try {
+        const filePath = path.join(__dirname, '..', 'uploads', 'videos', req.file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'
@@ -454,7 +596,7 @@ export const updateVideo = async (req, res) => {
   }
 };
 
-// Delete a video
+// Delete a video (also deletes the video file from server)
 export const deleteVideo = async (req, res) => {
   try {
     const { courseId, moduleId, videoId } = req.params;
@@ -488,13 +630,32 @@ export const deleteVideo = async (req, res) => {
       });
     }
 
+    // Delete the video file from server if it exists
+    if (video.videoPath) {
+      try {
+        const filePath = path.join(__dirname, '..', video.videoPath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`✅ Deleted video file: ${filePath}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting video file:', deleteError);
+        // Continue with deletion even if file deletion fails
+      }
+    }
+
     module.videos.pull(videoId);
     await course.save();
+
+    // Populate the course before returning
+    const populatedCourse = await Course.findById(course._id)
+      .populate('teacher', 'fullName email')
+      .populate('students', 'fullName email');
 
     res.status(200).json({
       success: true,
       message: 'Video deleted successfully.',
-      course: course
+      course: populatedCourse
     });
   } catch (error) {
     console.error('Delete video error:', error);

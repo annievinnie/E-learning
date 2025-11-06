@@ -194,15 +194,15 @@ const CourseDetailPage = () => {
               </div>
               <div className="d-flex align-items-center bg-white bg-opacity-25 rounded p-3 mt-4">
                 <img
-                  src={course.instructor?.avatar || course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
-                  alt={course.instructor?.name || course.instructor || "Instructor"}
+                  src={course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
+                  alt={course.instructor || "Instructor"}
                   className="rounded-circle me-3 border border-white"
                   width="64"
                   height="64"
                 />
                 <div>
-                  <h5 className="mb-0">{course.instructor?.name || course.instructor || "Instructor"}</h5>
-                  <small>{course.instructor?.title || "Course Instructor"}</small>
+                  <h5 className="mb-0">{course.instructor || "Instructor"}</h5>
+                  <small>{course.instructorEmail || "Course Instructor"}</small>
                 </div>
               </div>
             </div>
@@ -299,15 +299,15 @@ const CourseDetailPage = () => {
             <div className="card border-0 shadow-sm p-4">
               <div className="d-flex align-items-center mb-3">
                 <img
-                  src={course.instructor?.avatar || course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
-                  alt={course.instructor?.name || course.instructor || "Instructor"}
+                  src={course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
+                  alt={course.instructor || "Instructor"}
                   className="rounded-circle me-3"
                   width="64"
                   height="64"
                 />
                 <div>
-                  <h5 className="mb-0">{course.instructor?.name || course.instructor || "Instructor"}</h5>
-                  <p className="text-muted mb-0">{course.instructor?.title || course.instructorEmail || "Course Instructor"}</p>
+                  <h5 className="mb-0">{course.instructor || "Instructor"}</h5>
+                  <p className="text-muted mb-0">{course.instructorEmail || "Course Instructor"}</p>
                 </div>
               </div>
               <p>

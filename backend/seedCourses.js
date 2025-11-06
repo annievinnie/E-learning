@@ -5,7 +5,8 @@ import User from './models/User.js';
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/e-learning';
+// Use the same MONGO_URI as the rest of the app
+const MONGODB_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/e-learning';
 
 const sampleCourses = [
   {
@@ -59,7 +60,9 @@ const seedCourses = async () => {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    console.log('\n✅ Connected to MongoDB');
+    console.log(`   Database: ${mongoose.connection.name}`);
+    console.log(`   Host: ${mongoose.connection.host}\n`);
 
     // Find a teacher user
     const teacher = await User.findOne({ role: 'teacher' });
@@ -91,11 +94,23 @@ const seedCourses = async () => {
     }
 
     console.log(`\n🎉 Successfully seeded ${createdCourses.length} courses!`);
-    console.log('\nCourse IDs (use these for testing):');
-    createdCourses.forEach(course => {
-      console.log(`  - ${course.title}: ${course._id}`);
+    console.log('\nCourse Details:');
+    createdCourses.forEach((course, index) => {
+      console.log(`\n${index + 1}. ${course.title}`);
+      console.log(`   ID: ${course._id}`);
+      console.log(`   Price: $${course.price}`);
+      console.log(`   Level: ${course.level}`);
+      console.log(`   Duration: ${course.duration}`);
+      console.log(`   Teacher: ${teacher.fullName} (${teacher.email})`);
     });
+    
+    console.log(`\n📊 Summary:`);
+    console.log(`   Database: ${mongoose.connection.name}`);
+    console.log(`   Collection: courses`);
+    console.log(`   Total courses: ${createdCourses.length}\n`);
 
+    await mongoose.connection.close();
+    console.log('✅ Connection closed\n');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding courses:', error);

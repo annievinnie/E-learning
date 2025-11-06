@@ -13,13 +13,18 @@ API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   
+  // Don't set Content-Type for FormData - let browser set it with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  
   // Log request for debugging
   console.log('API Request:', {
     method: config.method?.toUpperCase(),
     url: config.url,
     baseURL: config.baseURL,
     fullURL: `${config.baseURL}${config.url}`,
-    data: config.data
+    hasFormData: config.data instanceof FormData
   });
   
   return config;

@@ -13,7 +13,11 @@ const videoSchema = new mongoose.Schema({
   },
   videoUrl: {
     type: String,
-    required: true
+    default: '' // Keep for backward compatibility (external URLs)
+  },
+  videoPath: {
+    type: String,
+    default: '' // Path to uploaded video file
   },
   duration: {
     type: String,
@@ -92,6 +96,12 @@ const courseSchema = new mongoose.Schema({
   thumbnail: {
     type: String,
     default: ''
+  },
+  category: {
+    type: String,
+    required: true,
+    enum: ['Web Development', 'Mobile Development', 'Data Science', 'Design', 'Business', 'Marketing', 'Photography', 'Music', 'Other'],
+    default: 'Other'
   },
   price: {
     type: Number,

@@ -14,6 +14,9 @@ export const signupUser = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
+    // Normalize role to lowercase to match enum values
+    const normalizedRole = role ? role.toLowerCase() : "student";
+
     // Check if email already exists in User collection
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -27,7 +30,7 @@ export const signupUser = async (req, res) => {
     }
 
     // If role is teacher, create an application instead of direct registration
-    if (role === "teacher") {
+    if (normalizedRole === "teacher") {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const teacherApplication = new TeacherApplication({
@@ -38,6 +41,11 @@ export const signupUser = async (req, res) => {
       });
 
       await teacherApplication.save();
+      console.log(`\n✅ Teacher application saved successfully:`);
+      console.log(`   Database: ${teacherApplication.db.databaseName}`);
+      console.log(`   Collection: ${teacherApplication.collection.name}`);
+      console.log(`   Application ID: ${teacherApplication._id}`);
+      console.log(`   Email: ${teacherApplication.email}\n`);
 
       // Send notification email to admin (if configured)
       try {
@@ -75,11 +83,17 @@ export const signupUser = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
-      role,
+      role: normalizedRole,
       isApproved: true, // Students and admins are approved by default
     });
 
     await newUser.save();
+    console.log(`\n✅ User saved successfully to database:`);
+    console.log(`   Database: ${newUser.db.databaseName}`);
+    console.log(`   Collection: ${newUser.collection.name}`);
+    console.log(`   User ID: ${newUser._id}`);
+    console.log(`   Email: ${newUser.email}`);
+    console.log(`   Role: ${newUser.role}\n`);
     res.status(201).json({ message: "Account created successfully!" });
   } catch (error) {
     console.error("Signup error:", error);
