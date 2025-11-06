@@ -47,3 +47,9 @@ logs/
 # Misc
 *.bak
 *.orig
+
+# Uploaded files
+backend/uploads/videos/*
+!backend/uploads/videos/.gitkeep
+backend/uploads/images/*
+!backend/uploads/images/.gitkeep

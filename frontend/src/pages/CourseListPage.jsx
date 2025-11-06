@@ -126,7 +126,7 @@ const CoursesListPage = () => {
                         <div className="card shadow-sm border-0 h-100">
                             {course.thumbnail ? (
                                 <img
-                                    src={course.thumbnail}
+                                    src={course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`}
                                     className="card-img-top"
                                     alt={course.title}
                                     style={{ height: '200px', objectFit: 'cover' }}

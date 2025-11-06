@@ -140,7 +140,7 @@ const SignupPage = () => {
         fullName: '',
         email: '',
         password: '',
-        role: 'Student'
+        role: 'student'
     });
     const [loader, setLoader] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
@@ -307,7 +307,7 @@ const SignupPage = () => {
                                 <input
                                     type="text"
                                     name="role"
-                                    value={form.role}
+                                    value="Student"
                                     style={styles.input}
                                     readOnly
                                 />
