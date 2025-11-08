@@ -27,7 +27,7 @@ export const getAllCourses = async (req, res) => {
     
     // Get courses with pagination
     const courses = await Course.find(query)
-      .populate('teacher', 'fullName email')
+      .populate('teacher', 'fullName email profilePicture')
       .select('-modules.videos') // Don't send video URLs in list view for performance
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -37,13 +37,22 @@ export const getAllCourses = async (req, res) => {
     const total = await Course.countDocuments(query);
     
     // Format courses for frontend
-    const formattedCourses = courses.map(course => ({
-      id: course._id,
-      title: course.title,
-      description: course.description,
-      instructor: course.teacher?.fullName || 'Unknown',
-      instructorImage: '', // Can be added to User model later
-      thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
+    const formattedCourses = courses.map(course => {
+      // Format instructor image URL
+      let instructorImage = '';
+      if (course.teacher?.profilePicture) {
+        instructorImage = course.teacher.profilePicture.startsWith('http') 
+          ? course.teacher.profilePicture 
+          : `http://localhost:5000${course.teacher.profilePicture}`;
+      }
+      
+      return {
+        id: course._id,
+        title: course.title,
+        description: course.description,
+        instructor: course.teacher?.fullName || 'Unknown',
+        instructorImage: instructorImage,
+        thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
       category: course.category || 'Other',
       level: course.level.charAt(0).toUpperCase() + course.level.slice(1),
       rating: 4.5, // Can be added as reviews/ratings later
@@ -55,7 +64,8 @@ export const getAllCourses = async (req, res) => {
       originalPrice: course.price ? course.price * 1.5 : 0,
       bestseller: course.students?.length > 100,
       createdAt: course.createdAt
-    }));
+      };
+    });
     
     res.status(200).json({
       success: true,
@@ -83,7 +93,7 @@ export const getCourseDetails = async (req, res) => {
     const userId = req.user.userId || req.user.id;
     
     const course = await Course.findById(courseId)
-      .populate('teacher', 'fullName email')
+      .populate('teacher', 'fullName email profilePicture')
       .populate('students', 'fullName email');
     
     if (!course) {
@@ -101,18 +111,30 @@ export const getCourseDetails = async (req, res) => {
       });
     }
     
-    // Check if student is enrolled
-    const isEnrolled = course.students.some(
-      student => student._id.toString() === userId.toString()
-    );
+    // Check if student is enrolled (handle both old format ObjectId and new format with studentId)
+    const isEnrolled = course.students.some(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() === userId.toString();
+      }
+      // Handle legacy format (direct ObjectId)
+      return student.toString() === userId.toString();
+    });
     
     // Format course data similar to getAllCourses for consistency
+    // Format instructor image URL
+    let instructorImage = '';
+    if (course.teacher?.profilePicture) {
+      instructorImage = course.teacher.profilePicture.startsWith('http') 
+        ? course.teacher.profilePicture 
+        : `http://localhost:5000${course.teacher.profilePicture}`;
+    }
+    
     const formattedCourse = {
       id: course._id,
       title: course.title,
       description: course.description,
       instructor: course.teacher?.fullName || 'Unknown',
-      instructorImage: '', // Can be added to User model later
+      instructorImage: instructorImage,
       instructorEmail: course.teacher?.email || '',
       thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
       category: course.category || 'Other',
@@ -168,10 +190,23 @@ export const enrollInCourse = async (req, res) => {
       });
     }
     
-    // Check if already enrolled
-    const isEnrolled = course.students.some(
-      studentId => studentId.toString() === userId.toString()
-    );
+    // Get user details for enrollment check
+    const studentUser = await User.findById(userId);
+    if (!studentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    // Check if already enrolled (handle both old format ObjectId and new format with studentId)
+    const isEnrolled = course.students.some(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() === userId.toString();
+      }
+      // Handle legacy format (direct ObjectId)
+      return student.toString() === userId.toString();
+    });
     
     if (isEnrolled) {
       return res.status(400).json({
@@ -201,8 +236,11 @@ export const enrollInCourse = async (req, res) => {
       }
     }
     
-    // Add student to course
-    course.students.push(userId);
+    // Add student to course with ID and name (user already fetched above)
+    course.students.push({
+      studentId: userId,
+      studentName: studentUser.fullName || 'Student'
+    });
     await course.save();
     
     res.status(200).json({
@@ -223,8 +261,14 @@ export const getEnrolledCourses = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
     
-    const courses = await Course.find({ students: userId })
-      .populate('teacher', 'fullName email')
+    // Find courses where student is enrolled (handle both old and new format)
+    const courses = await Course.find({
+      $or: [
+        { 'students.studentId': userId }, // New format
+        { students: userId } // Legacy format
+      ]
+    })
+      .populate('teacher', 'fullName email profilePicture')
       .sort({ createdAt: -1 });
     
     res.status(200).json({
@@ -255,10 +299,14 @@ export const unenrollFromCourse = async (req, res) => {
       });
     }
     
-    // Remove student from course
-    course.students = course.students.filter(
-      studentId => studentId.toString() !== userId.toString()
-    );
+    // Remove student from course (handle both old format ObjectId and new format with studentId)
+    course.students = course.students.filter(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() !== userId.toString();
+      }
+      // Handle legacy format (direct ObjectId)
+      return student.toString() !== userId.toString();
+    });
     
     await course.save();
     

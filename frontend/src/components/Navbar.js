@@ -201,31 +201,32 @@ const Navbar = () => {
         <UserSection>
           {isLoggedIn ? (
             <AvatarContainer>
-              <AvatarButton
-                ref={avatarRef}
-                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                onMouseEnter={() => setShowProfileDropdown(true)}
-                hasImage={!!user?.profilePicture}
-              >
-                {user?.profilePicture ? (
-                  <AvatarImage src={user.profilePicture} alt={user?.fullName} />
-                ) : (
-                  <AvatarText>
-                    {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
-                  </AvatarText>
-                )}
-              </AvatarButton>
+              <UserInfo>
+                <UserDetails>
+                  <UserName>{user?.fullName}</UserName>
+                  <UserRole>{user?.role}</UserRole>
+                </UserDetails>
+                <AvatarButton
+                  ref={avatarRef}
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  onMouseEnter={() => setShowProfileDropdown(true)}
+                  $hasImage={!!user?.profilePicture}
+                >
+                  {user?.profilePicture ? (
+                    <AvatarImage src={user.profilePicture} alt={user?.fullName} />
+                  ) : (
+                    <AvatarText>
+                      {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarText>
+                  )}
+                </AvatarButton>
+              </UserInfo>
               
               {showProfileDropdown && (
                 <DropdownMenu ref={dropdownRef} onMouseLeave={() => setShowProfileDropdown(false)}>
                   <DropdownItem onClick={handleProfileClick}>
                     <DropdownIcon>👤</DropdownIcon>
                     Profile
-                  </DropdownItem>
-                  <DropdownDivider />
-                  <DropdownItem onClick={handleDashboard}>
-                    <DropdownIcon>📊</DropdownIcon>
-                    Dashboard
                   </DropdownItem>
                   <DropdownDivider />
                   <DropdownItem onClick={handleLogout}>
@@ -422,12 +423,36 @@ const AvatarContainer = styled.div`
   position: relative;
 `;
 
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const UserDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+`;
+
+const UserName = styled.span`
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+`;
+
+const UserRole = styled.span`
+  font-size: 0.8rem;
+  color: #666;
+  text-transform: capitalize;
+`;
+
 const AvatarButton = styled.button`
   width: 45px;
   height: 45px;
   border-radius: 50%;
   border: 2px solid #667eea;
-  background: ${props => props.hasImage ? 'transparent' : '#667eea'};
+  background: ${props => props.$hasImage ? 'transparent' : '#667eea'};
   color: white;
   display: flex;
   align-items: center;

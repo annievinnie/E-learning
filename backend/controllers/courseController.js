@@ -665,3 +665,116 @@ export const deleteVideo = async (req, res) => {
     });
   }
 };
+
+// Get enrolled students for all teacher's courses
+export const getEnrolledStudents = async (req, res) => {
+  try {
+    const teacherId = req.user.userId || req.user.id;
+    
+    // Get all courses for this teacher
+    const courses = await Course.find({ teacher: teacherId })
+      .select('_id title students')
+      .sort({ createdAt: -1 });
+    
+    // Process courses and populate student details
+    const coursesWithStudents = await Promise.all(
+      courses.map(async (course) => {
+        // Safety check: ensure students array exists
+        if (!course.students || !Array.isArray(course.students) || course.students.length === 0) {
+          return {
+            courseId: course._id,
+            courseTitle: course.title,
+            studentCount: 0,
+            students: []
+          };
+        }
+
+        // Get student details for each enrolled student
+        const studentsWithDetails = await Promise.all(
+          course.students.map(async (student) => {
+            try {
+              // Handle both old format (ObjectId) and new format (object with studentId)
+              let studentId;
+              let studentName;
+              let enrolledAt;
+              
+              if (student && typeof student === 'object' && student.studentId) {
+                // New format: { studentId, studentName, enrolledAt }
+                studentId = student.studentId;
+                studentName = student.studentName;
+                enrolledAt = student.enrolledAt;
+              } else {
+                // Old format: just ObjectId
+                studentId = student;
+                studentName = null;
+                enrolledAt = null;
+              }
+              
+              // Ensure studentId is valid
+              if (!studentId) {
+                return null;
+              }
+              
+              // Fetch full student details
+              const studentDetails = await User.findById(studentId)
+                .select('fullName email profilePicture');
+              
+              if (studentDetails) {
+                return {
+                  studentId: studentDetails._id,
+                  studentName: studentName || studentDetails.fullName,
+                  email: studentDetails.email,
+                  profilePicture: studentDetails.profilePicture,
+                  enrolledAt: enrolledAt || new Date(),
+                  // Format enrolled date
+                  enrolledDateFormatted: enrolledAt 
+                    ? new Date(enrolledAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : 'N/A'
+                };
+              }
+              return null;
+            } catch (err) {
+              console.error('Error processing student:', err);
+              return null;
+            }
+          })
+        );
+        
+        // Filter out null values (students that don't exist)
+        const validStudents = studentsWithDetails.filter(s => s !== null);
+        
+        return {
+          courseId: course._id,
+          courseTitle: course.title,
+          studentCount: validStudents.length,
+          students: validStudents
+        };
+      })
+    );
+    
+    // Calculate total students across all courses (unique students)
+    const allStudentIds = new Set();
+    coursesWithStudents.forEach(course => {
+      course.students.forEach(student => {
+        allStudentIds.add(student.studentId.toString());
+      });
+    });
+    
+    res.status(200).json({
+      success: true,
+      totalCourses: coursesWithStudents.length,
+      totalUniqueStudents: allStudentIds.size,
+      courses: coursesWithStudents
+    });
+  } catch (error) {
+    console.error('Get enrolled students error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
