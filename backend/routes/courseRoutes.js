@@ -10,7 +10,8 @@ import {
   deleteModule,
   addVideoToModule,
   updateVideo,
-  deleteVideo
+  deleteVideo,
+  getEnrolledStudents
 } from '../controllers/courseController.js';
 import { verifyToken } from '../middleware/auth.js';
 import { uploadVideo } from '../middleware/uploadMiddleware.js';
@@ -31,6 +32,7 @@ const verifyTeacher = (req, res, next) => {
 
 // Course routes
 router.get('/', verifyToken, verifyTeacher, getTeacherCourses);
+router.get('/students/enrolled', verifyToken, verifyTeacher, getEnrolledStudents);
 router.get('/:courseId', verifyToken, verifyTeacher, getCourseById);
 router.post('/', verifyToken, verifyTeacher, uploadImage, createCourse);
 router.put('/:courseId', verifyToken, verifyTeacher, uploadImage, updateCourse);

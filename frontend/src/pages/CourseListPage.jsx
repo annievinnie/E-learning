@@ -27,7 +27,17 @@ const CoursesListPage = () => {
         try {
             const response = await API.get('/student/courses');
             if (response.data.success) {
-                setCourses(response.data.courses || []);
+                const courses = (response.data.courses || []).map(course => {
+                    // Ensure instructor is a string, not an object (handle legacy format)
+                    if (course.instructor && typeof course.instructor === 'object') {
+                        course.instructor = course.instructor.name || course.instructor.fullName || 'Instructor';
+                        if (!course.instructorImage) {
+                            course.instructorImage = course.instructor.avatar || course.instructor.profilePicture || '';
+                        }
+                    }
+                    return course;
+                });
+                setCourses(courses);
             }
         } catch (error) {
             console.error('Error fetching courses:', error);
@@ -155,13 +165,40 @@ const CoursesListPage = () => {
                                 </p>
 
                                 <div className="d-flex align-items-center mb-3">
-                                    <img
-                                        src={course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
-                                        alt={course.instructor || "Instructor"}
-                                        className="rounded-circle me-2"
-                                        width="32"
-                                        height="32"
-                                    />
+                                    {course.instructorImage ? (
+                                        <img
+                                            src={course.instructorImage}
+                                            alt={course.instructor || "Instructor"}
+                                            className="rounded-circle me-2"
+                                            width="32"
+                                            height="32"
+                                            style={{ 
+                                                objectFit: 'cover', 
+                                                backgroundColor: '#ffffff',
+                                                flexShrink: 0
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                const fallback = e.target.nextElementSibling;
+                                                if (fallback && fallback.classList.contains('instructor-fallback')) {
+                                                    fallback.style.display = 'flex';
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    {/* <div
+                                        className="instructor-fallback rounded-circle me-2 d-flex align-items-center justify-content-center text-white fw-bold"
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            backgroundColor: '#667eea',
+                                            fontSize: '0.875rem',
+                                            display: course.instructorImage ? 'none' : 'flex',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        {(course.instructor || 'U').charAt(0).toUpperCase()}
+                                    </div> */}
                                     <span className="text-secondary small">{course.instructor || 'Unknown'}</span>
                                 </div>
 

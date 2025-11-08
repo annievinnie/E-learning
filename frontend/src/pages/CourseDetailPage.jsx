@@ -36,8 +36,16 @@ const CourseDetailPage = () => {
     try {
       const response = await API.get(`/student/courses/${id}`);
       if (response.data.success) {
-        setCourse(response.data.course);
-        setIsEnrolled(response.data.course.isEnrolled || false);
+        const courseData = response.data.course;
+        // Ensure instructor is a string, not an object (handle legacy format)
+        if (courseData.instructor && typeof courseData.instructor === 'object') {
+          courseData.instructor = courseData.instructor.name || courseData.instructor.fullName || 'Instructor';
+          if (!courseData.instructorImage) {
+            courseData.instructorImage = courseData.instructor.avatar || courseData.instructor.profilePicture || '';
+          }
+        }
+        setCourse(courseData);
+        setIsEnrolled(courseData.isEnrolled || false);
       }
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -51,11 +59,9 @@ const CourseDetailPage = () => {
         reviews: 12453,
         students: 89342,
         duration: "42h 30m",
-        instructor: {
-          name: "Sarah Johnson",
-          title: "Senior Full Stack Developer",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-        },
+        instructor: "Sarah Johnson",
+        instructorEmail: "sarah@example.com",
+        instructorImage: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
         price: 89.99,
         originalPrice: 199.99,
         discount: 55,
@@ -73,52 +79,50 @@ const CourseDetailPage = () => {
     setEnrolling(true);
 
     try {
+      // Free course - enroll immediately
       if (!course.price || course.price === 0) {
         const response = await API.post(`/student/courses/${id}/enroll`);
         if (response.data.success) {
           setIsEnrolled(true);
           alert('Successfully enrolled in course!');
+          // Refresh course data to update enrollment status
+          fetchCourseDetails();
+        } else {
+          alert(response.data?.message || 'Failed to enroll. Please try again.');
         }
       } else {
-        console.log('Creating checkout for course:', id);
+        // Paid course - redirect to Stripe checkout
         const response = await API.post(`/payment/checkout/${id}`);
-        console.log('Checkout response:', response.data);
-
+        
         if (response.data.success && response.data.url) {
-          console.log('Redirecting to:', response.data.url);
+          // Redirect to Stripe checkout
           window.location.href = response.data.url;
         } else {
-          console.error('No URL in response:', response.data);
           alert(response.data?.message || 'Failed to create checkout session. Please try again.');
+          setEnrolling(false);
         }
       }
     } catch (error) {
       console.error('Enrollment error:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
-
-      if (error.response?.data?.requiresPayment) {
-        try {
-          console.log('Creating checkout session (retry)...');
-          const paymentResponse = await API.post(`/payment/checkout/${id}`);
-          if (paymentResponse.data.success && paymentResponse.data.url) {
-            window.location.href = paymentResponse.data.url;
-          } else {
-            alert(paymentResponse.data?.message || 'Failed to create checkout session. Please try again.');
-          }
-        } catch (paymentError) {
-          console.error('Payment error:', paymentError);
-          alert(paymentError.response?.data?.message || 'An error occurred. Please check console and try again.');
+      
+      // Get the actual error message from the backend
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to enroll. Please try again.';
+      
+      if (error.response?.status === 400) {
+        if (errorMessage.includes('already enrolled')) {
+          setIsEnrolled(true);
+          alert('You are already enrolled in this course!');
+          fetchCourseDetails();
+        } else {
+          alert(errorMessage);
         }
-      } else if (error.response?.status === 400 && error.response?.data?.message?.includes('already enrolled')) {
-        setIsEnrolled(true);
-        alert('You are already enrolled in this course!');
+      } else if (error.response?.status === 500) {
+        alert(errorMessage);
       } else {
-        const errorMsg = error.response?.data?.message || error.message || 'Failed to enroll. Please try again.';
-        console.error('Final error:', errorMsg);
-        alert(errorMsg);
+        alert(errorMessage);
       }
-    } finally {
       setEnrolling(false);
     }
   };
@@ -193,13 +197,35 @@ const CourseDetailPage = () => {
                 )}
               </div>
               <div className="d-flex align-items-center bg-white bg-opacity-25 rounded p-3 mt-4">
-                <img
-                  src={course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
-                  alt={course.instructor || "Instructor"}
-                  className="rounded-circle me-3 border border-white"
-                  width="64"
-                  height="64"
-                />
+                {course.instructorImage ? (
+                  <img
+                    src={course.instructorImage}
+                    alt={course.instructor || "Instructor"}
+                    className="rounded-circle me-3 border border-white"
+                    width="64"
+                    height="64"
+                    style={{ objectFit: 'cover', backgroundColor: '#ffffff' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const fallback = e.target.parentElement.querySelector('.instructor-fallback');
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                {/* <div
+                  className="instructor-fallback rounded-circle me-3 border border-white d-flex align-items-center justify-content-center text-white fw-bold"
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    backgroundColor: '#667eea',
+                    fontSize: '1.5rem',
+                    display: course.instructorImage ? 'none' : 'flex'
+                  }}
+                >
+                  {(course.instructor || 'U').charAt(0).toUpperCase()}
+                </div> */}
                 <div>
                   <h5 className="mb-0">{course.instructor || "Instructor"}</h5>
                   <small>{course.instructorEmail || "Course Instructor"}</small>
@@ -298,13 +324,35 @@ const CourseDetailPage = () => {
           {activeTab === "instructor" && (
             <div className="card border-0 shadow-sm p-4">
               <div className="d-flex align-items-center mb-3">
-                <img
-                  src={course.instructorImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"}
-                  alt={course.instructor || "Instructor"}
-                  className="rounded-circle me-3"
-                  width="64"
-                  height="64"
-                />
+                {course.instructorImage ? (
+                  <img
+                    src={course.instructorImage}
+                    alt={course.instructor || "Instructor"}
+                    className="rounded-circle me-3"
+                    width="64"
+                    height="64"
+                    style={{ objectFit: 'cover', backgroundColor: '#ffffff' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const fallback = e.target.parentElement.querySelector('.instructor-fallback');
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div
+                  className="instructor-fallback rounded-circle me-3 d-flex align-items-center justify-content-center text-white fw-bold"
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    backgroundColor: '#667eea',
+                    fontSize: '1.5rem',
+                    display: course.instructorImage ? 'none' : 'flex'
+                  }}
+                >
+                  {(course.instructor || 'U').charAt(0).toUpperCase()}
+                </div>
                 <div>
                   <h5 className="mb-0">{course.instructor || "Instructor"}</h5>
                   <p className="text-muted mb-0">{course.instructorEmail || "Course Instructor"}</p>
