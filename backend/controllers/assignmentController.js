@@ -5,7 +5,7 @@ import User from '../models/User.js';
 // Get all assignments for a teacher
 export const getTeacherAssignments = async (req, res) => {
   try {
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
     
     const assignments = await Assignment.find({ teacher: teacherId })
       .populate('course', 'title description')
@@ -30,7 +30,7 @@ export const getTeacherAssignments = async (req, res) => {
 export const getAssignmentById = async (req, res) => {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const assignment = await Assignment.findOne({ 
       _id: assignmentId, 
@@ -64,7 +64,7 @@ export const getAssignmentById = async (req, res) => {
 export const createAssignment = async (req, res) => {
   try {
     const { title, description, courseId, dueDate, maxPoints, instructions, allowLateSubmissions, latePenalty } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     // Validation
     if (!title || !description || !courseId || !dueDate) {
@@ -144,7 +144,7 @@ export const updateAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
     const { title, description, dueDate, maxPoints, instructions, allowLateSubmissions, latePenalty, status } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const assignment = await Assignment.findOne({ 
       _id: assignmentId, 
@@ -163,12 +163,7 @@ export const updateAssignment = async (req, res) => {
     if (description) assignment.description = description;
     if (dueDate) {
       const dueDateObj = new Date(dueDate);
-      if (dueDateObj <= new Date()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Due date must be in the future.'
-        });
-      }
+      // Allow updating due date even if it's in the past (for flexibility)
       assignment.dueDate = dueDateObj;
     }
     if (maxPoints) assignment.maxPoints = maxPoints;
@@ -202,7 +197,7 @@ export const updateAssignment = async (req, res) => {
 export const deleteAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const assignment = await Assignment.findOne({ 
       _id: assignmentId, 
@@ -235,7 +230,7 @@ export const deleteAssignment = async (req, res) => {
 export const getAssignmentSubmissions = async (req, res) => {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const assignment = await Assignment.findOne({ 
       _id: assignmentId, 
@@ -270,7 +265,7 @@ export const gradeSubmission = async (req, res) => {
   try {
     const { assignmentId, submissionId } = req.params;
     const { grade, feedback } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     // Validation
     if (grade === undefined || grade < 0 || grade > 100) {
@@ -325,7 +320,7 @@ export const gradeSubmission = async (req, res) => {
 export const getAssignmentStats = async (req, res) => {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user.userId || req.user.id;
 
     const assignment = await Assignment.findOne({ 
       _id: assignmentId, 

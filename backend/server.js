@@ -8,8 +8,9 @@ import userRoutes from "./routes/userRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
+import assignmentRoutes from "./routes/assignmentRoutes.js";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -25,12 +26,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  console.log('Request headers:', req.headers);
-  next();
-});
+// Request logging middleware (disabled for cleaner output)
+// app.use((req, res, next) => {
+//   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+//   next();
+// });
 
 // JSON parsing middleware (webhook is handled separately in paymentRoutes)
 app.use(express.json());
@@ -67,6 +67,7 @@ app.use("/api", userRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/assignments", assignmentRoutes);
 
 // Start server after database connection
 const startServer = async () => {
@@ -75,20 +76,6 @@ const startServer = async () => {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
-      console.log("\n=== Registered Routes ===");
-      // Log routes after server starts
-      if (app._router && app._router.stack) {
-        app._router.stack.forEach((middleware) => {
-          if (middleware.route) {
-            const methods = Object.keys(middleware.route.methods).join(', ').toUpperCase();
-            console.log(`${methods} ${middleware.route.path}`);
-          } else if (middleware.name === 'router' && middleware.regexp) {
-            console.log(`Router mounted at: ${middleware.regexp}`);
-          }
-        });
-      }
-      console.log("========================\n");
-      console.log("✅ Teacher application endpoint: POST /api/teacher/apply");
     });
   } catch (error) {
     console.error("Failed to start server:", error);

@@ -369,34 +369,48 @@ alert(error.response?.data?.message || 'Failed to delete video. Please try again
 };
 
 // Assignment management functions
-const fetchAssignments = () => {
-console.log('📝 Fetching assignments...');
+const fetchAssignments = async () => {
 setLoadingAssignments(true);
-// TODO: Implement actual API call when backend is ready
-setTimeout(() => {
+try {
+const response = await API.get('/assignments');
+if (response.data.success) {
+setAssignments(response.data.assignments || []);
+console.log('✅ Assignments fetched:', response.data.assignments);
+} else {
+console.error('Failed to fetch assignments:', response.data.message);
+alert('Failed to fetch assignments. Please try again.');
+}
+} catch (error) {
+console.error('Error fetching assignments:', error);
+alert(error.response?.data?.message || 'Failed to fetch assignments. Please try again.');
+} finally {
 setLoadingAssignments(false);
-}, 500);
+}
 };
 
 const handleCreateAssignment = async (assignmentData) => {
 setIsSubmittingAssignment(true);
 try {
-// Simulate API delay - TODO: Replace with actual API call
-await new Promise(resolve => setTimeout(resolve, 1000));
-const selectedCourseObj = courses.find(c => c._id === assignmentData.courseId);
-const newAssignment = {
-_id: Date.now().toString(),
-...assignmentData,
-course: { _id: assignmentData.courseId, title: selectedCourseObj?.title || 'Unknown Course' },
-status: 'active'
-};
+const response = await API.post('/assignments', {
+title: assignmentData.title,
+description: assignmentData.description,
+courseId: assignmentData.courseId,
+dueDate: assignmentData.dueDate,
+maxPoints: assignmentData.maxPoints || 100
+});
 
+if (response.data.success) {
+const newAssignment = response.data.assignment;
 setAssignments(prev => [...prev, newAssignment]);
 console.log('✅ Assignment created:', newAssignment);
 alert('Assignment created successfully!');
+} else {
+alert(response.data.message || 'Failed to create assignment.');
+throw new Error(response.data.message);
+}
 } catch (error) {
 console.error('Error creating assignment:', error);
-alert('Failed to create assignment. Please try again.');
+alert(error.response?.data?.message || 'Failed to create assignment. Please try again.');
 throw error;
 } finally {
 setIsSubmittingAssignment(false);
@@ -406,31 +420,50 @@ setIsSubmittingAssignment(false);
 const handleUpdateAssignment = async (assignmentId, assignmentData) => {
 setIsUpdatingAssignment(true);
 try {
-// Simulate API delay - TODO: Replace with actual API call
-await new Promise(resolve => setTimeout(resolve, 1000));
-setAssignments(prev => prev.map(assignment =>
-assignment._id === assignmentId
-? { ...assignment, ...assignmentData }
-: assignment
-));
+const response = await API.put(`/assignments/${assignmentId}`, {
+title: assignmentData.title,
+description: assignmentData.description,
+courseId: assignmentData.courseId,
+dueDate: assignmentData.dueDate,
+maxPoints: assignmentData.maxPoints || 100
+});
 
-console.log('✅ Assignment updated:', assignmentData);
+if (response.data.success) {
+const updatedAssignment = response.data.assignment;
+setAssignments(prev => prev.map(assignment =>
+assignment._id === assignmentId ? updatedAssignment : assignment
+));
+console.log('✅ Assignment updated:', updatedAssignment);
 alert('Assignment updated successfully!');
 setEditingAssignment(null);
+} else {
+alert(response.data.message || 'Failed to update assignment.');
+throw new Error(response.data.message);
+}
 } catch (error) {
 console.error('Error updating assignment:', error);
-alert('Failed to update assignment. Please try again.');
+alert(error.response?.data?.message || 'Failed to update assignment. Please try again.');
 throw error;
 } finally {
 setIsUpdatingAssignment(false);
 }
 };
 
-const handleDeleteAssignment = (assignmentId) => {
+const handleDeleteAssignment = async (assignmentId) => {
 if (window.confirm('Are you sure you want to delete this assignment?')) {
+try {
+const response = await API.delete(`/assignments/${assignmentId}`);
+if (response.data.success) {
 setAssignments(prev => prev.filter(assignment => assignment._id !== assignmentId));
 console.log('✅ Assignment deleted:', assignmentId);
 alert('Assignment deleted successfully!');
+} else {
+alert(response.data.message || 'Failed to delete assignment.');
+}
+} catch (error) {
+console.error('Error deleting assignment:', error);
+alert(error.response?.data?.message || 'Failed to delete assignment. Please try again.');
+}
 }
 };
 
