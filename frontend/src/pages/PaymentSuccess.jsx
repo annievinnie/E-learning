@@ -21,6 +21,10 @@ const PaymentSuccess = () => {
         const response = await API.get(`/payment/verify?session_id=${sessionId}`);
         if (response.data.success) {
           setSuccess(true);
+          // Redirect to My Courses after 2 seconds
+          setTimeout(() => {
+            navigate('/my-courses');
+          }, 2000);
         }
       } catch (error) {
         console.error('Payment verification error:', error);
@@ -49,7 +53,7 @@ const PaymentSuccess = () => {
             <p className="mb-4">Your enrollment has been confirmed. You now have access to the course.</p>
             <button
               className="btn btn-primary"
-              onClick={() => navigate('/StudentDashboard')}
+              onClick={() => navigate('/my-courses')}
             >
               Go to My Courses
             </button>

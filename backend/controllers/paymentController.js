@@ -10,9 +10,24 @@ const getStripe = () => {
   if (!stripe) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
+      console.error('❌ STRIPE_SECRET_KEY is missing from environment variables');
+      console.error('Please add STRIPE_SECRET_KEY to your .env file');
       throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
     }
-    stripe = new Stripe(secretKey);
+    
+    // Validate key format (Stripe keys start with sk_ for secret keys)
+    if (!secretKey.startsWith('sk_')) {
+      console.error('❌ STRIPE_SECRET_KEY appears to be invalid (should start with sk_)');
+      throw new Error('Invalid STRIPE_SECRET_KEY format');
+    }
+    
+    try {
+      stripe = new Stripe(secretKey);
+      console.log('✅ Stripe initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize Stripe:', error.message);
+      throw error;
+    }
   }
   return stripe;
 };
@@ -79,12 +94,50 @@ export const createCheckoutSession = async (req, res) => {
     try {
       stripeInstance = getStripe();
     } catch (stripeError) {
-      console.error('Stripe initialization error:', stripeError);
+      console.error('❌ Stripe initialization error:', stripeError.message);
+      console.error('Error stack:', stripeError.stack);
+      
+      // Provide more helpful error message
+      let errorMessage = 'Payment service configuration error. Please contact support.';
+      if (stripeError.message.includes('not set')) {
+        errorMessage = 'Payment service is not configured. Please contact the administrator.';
+      } else if (stripeError.message.includes('Invalid')) {
+        errorMessage = 'Payment service configuration is invalid. Please contact the administrator.';
+      }
+      
       return res.status(500).json({
         success: false,
-        message: 'Payment service configuration error. Please contact support.'
+        message: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { 
+          error: stripeError.message,
+          hint: 'Check that STRIPE_SECRET_KEY is set in your .env file'
+        })
       });
     }
+
+    // Prepare thumbnail image URL for Stripe (must be a valid HTTP/HTTPS URL)
+    let thumbnailImages = [];
+    if (course.thumbnail) {
+      let thumbnailUrl = course.thumbnail;
+      
+      // Convert relative paths to full URLs
+      if (thumbnailUrl && !thumbnailUrl.startsWith('http://') && !thumbnailUrl.startsWith('https://')) {
+        // If it's a relative path, make it a full URL
+        if (thumbnailUrl.startsWith('/')) {
+          thumbnailUrl = `http://localhost:5000${thumbnailUrl}`;
+        } else {
+          // If it doesn't start with /, it might be just a filename
+          thumbnailUrl = `http://localhost:5000/${thumbnailUrl}`;
+        }
+      }
+      
+      // Validate it's a proper URL before adding
+      if (thumbnailUrl && (thumbnailUrl.startsWith('http://') || thumbnailUrl.startsWith('https://'))) {
+        thumbnailImages = [thumbnailUrl];
+      }
+    }
+
+    console.log('📸 Course thumbnail for Stripe:', thumbnailImages.length > 0 ? thumbnailImages[0] : 'No thumbnail (using empty array)');
 
     // Create Stripe checkout session
     const session = await stripeInstance.checkout.sessions.create({
@@ -96,7 +149,7 @@ export const createCheckoutSession = async (req, res) => {
             product_data: {
               name: course.title,
               description: (course.description || course.subtitle || 'Course enrollment').substring(0, 200),
-              images: course.thumbnail ? [course.thumbnail] : [],
+              images: thumbnailImages, // Only include valid URLs
             },
             unit_amount: amountInCents,
           },
@@ -117,15 +170,35 @@ export const createCheckoutSession = async (req, res) => {
     });
 
     // Create payment record with pending status
-    const payment = new Payment({
-      student: userId,
-      course: courseId,
-      amount: amount,
-      stripeSessionId: session.id,
-      status: 'pending'
-    });
+    try {
+      const payment = new Payment({
+        student: userId,
+        course: courseId,
+        amount: amount,
+        stripeSessionId: session.id,
+        status: 'pending'
+      });
 
-    await payment.save();
+      await payment.save();
+      console.log('✅ Payment record created successfully');
+    } catch (paymentError) {
+      // If payment record creation fails (e.g., duplicate key), log but don't fail the checkout
+      console.error('⚠️  Warning: Failed to save payment record:', paymentError.message);
+      // Still proceed with returning the checkout URL
+      // The payment can be tracked via the Stripe session ID
+    }
+
+    console.log('✅ Stripe checkout session created successfully');
+    console.log('Session ID:', session.id);
+    console.log('Checkout URL:', session.url);
+
+    if (!session.url) {
+      console.error('❌ Stripe session created but URL is missing!');
+      return res.status(500).json({
+        success: false,
+        message: 'Payment session created but checkout URL is missing. Please try again.'
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -183,9 +256,14 @@ export const verifyPaymentAndEnroll = async (req, res) => {
     try {
       stripeInstance = getStripe();
     } catch (stripeError) {
+      console.error('❌ Stripe initialization error:', stripeError.message);
       return res.status(500).json({
         success: false,
-        message: 'Payment service configuration error.'
+        message: 'Payment service configuration error.',
+        ...(process.env.NODE_ENV === 'development' && { 
+          error: stripeError.message,
+          hint: 'Check that STRIPE_SECRET_KEY is set in your .env file'
+        })
       });
     }
 
@@ -234,13 +312,28 @@ export const verifyPaymentAndEnroll = async (req, res) => {
     // Enroll student in course
     const course = await Course.findById(payment.course);
     if (course) {
-      const isEnrolled = course.students.some(
-        studentId => studentId.toString() === payment.student.toString()
-      );
+      // Check if already enrolled (handle both old and new format)
+      const isEnrolled = course.students.some(student => {
+        if (typeof student === 'object' && student.studentId) {
+          return student.studentId.toString() === payment.student.toString();
+        }
+        return student.toString() === payment.student.toString();
+      });
 
       if (!isEnrolled) {
-        course.students.push(payment.student);
+        // Get student details for enrollment
+        const studentUser = await User.findById(payment.student).select('fullName');
+        
+        // Add student in the new format
+        course.students.push({
+          studentId: payment.student,
+          studentName: studentUser?.fullName || 'Student',
+          enrolledAt: new Date()
+        });
         await course.save();
+        console.log(`✅ Student ${payment.student} enrolled in course ${course._id}`);
+      } else {
+        console.log(`ℹ️  Student ${payment.student} already enrolled in course ${course._id}`);
       }
     }
 

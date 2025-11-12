@@ -12,6 +12,36 @@ import assignmentRoutes from "./routes/assignmentRoutes.js";
 
 dotenv.config({ quiet: true });
 
+// Check for required environment variables on startup
+const requiredEnvVars = {
+  'MONGO_URI': process.env.MONGO_URI,
+  'JWT_SECRET': process.env.JWT_SECRET,
+  'STRIPE_SECRET_KEY': process.env.STRIPE_SECRET_KEY,
+};
+
+console.log('\n🔍 Checking environment variables...');
+let missingVars = [];
+for (const [key, value] of Object.entries(requiredEnvVars)) {
+  if (!value) {
+    missingVars.push(key);
+    console.log(`❌ ${key} is missing`);
+  } else {
+    // Mask sensitive values
+    const maskedValue = key.includes('SECRET') || key.includes('KEY') 
+      ? `${value.substring(0, 8)}...` 
+      : value;
+    console.log(`✅ ${key} is set (${maskedValue})`);
+  }
+}
+
+if (missingVars.length > 0) {
+  console.log(`\n⚠️  Warning: ${missingVars.length} required environment variable(s) are missing:`);
+  missingVars.forEach(v => console.log(`   - ${v}`));
+  console.log('   Please add them to your .env file\n');
+} else {
+  console.log('✅ All required environment variables are set\n');
+}
+
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
