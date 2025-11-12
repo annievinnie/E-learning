@@ -16,8 +16,11 @@ const StudentProfile = ({ user, onUpdate }) => {
     profilePicture: '',
     interests: []
   });
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState('');
   const [currentInterest, setCurrentInterest] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
@@ -36,6 +39,18 @@ const StudentProfile = ({ user, onUpdate }) => {
         profilePicture: user.profilePicture || '',
         interests: user.interests || []
       });
+      
+      // Set profile picture preview
+      if (user.profilePicture) {
+        if (user.profilePicture.startsWith('http')) {
+          setProfilePicturePreview(user.profilePicture);
+        } else {
+          // Local file path - construct full URL
+          setProfilePicturePreview(`http://localhost:5000${user.profilePicture}`);
+        }
+      } else {
+        setProfilePicturePreview('');
+      }
     }
   }, [user]);
 
@@ -62,6 +77,71 @@ const StudentProfile = ({ user, onUpdate }) => {
       ...prev,
       interests: prev.interests.filter(i => i !== interest)
     }));
+  };
+
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setMessage({ type: 'error', text: 'Please select a valid image file (JPEG, PNG, GIF, or WebP).' });
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'Image size must be less than 5MB.' });
+        return;
+      }
+      
+      setProfilePictureFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadProfilePicture = async () => {
+    if (!profilePictureFile) return;
+    
+    setUploadingPicture(true);
+    setMessage({ type: '', text: '' });
+    
+    try {
+      const formData = new FormData();
+      formData.append('profilePicture', profilePictureFile);
+      
+      const response = await API.post('/profile/picture', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.success) {
+        setMessage({ type: 'success', text: 'Profile picture uploaded successfully!' });
+        setProfilePictureFile(null);
+        if (onUpdate) {
+          onUpdate(response.data.user);
+        }
+        // Update formData with new profile picture path
+        setFormData(prev => ({
+          ...prev,
+          profilePicture: response.data.user.profilePicture
+        }));
+      }
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Failed to upload profile picture. Please try again.' 
+      });
+    } finally {
+      setUploadingPicture(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -399,40 +479,68 @@ const StudentProfile = ({ user, onUpdate }) => {
 
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-            Profile Picture URL
+            Profile Picture
           </label>
-          <input
-            type="url"
-            name="profilePicture"
-            value={formData.profilePicture}
-            onChange={handleChange}
-            placeholder="https://example.com/profile.jpg"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              fontSize: '1rem',
-              boxSizing: 'border-box'
-            }}
-          />
-          {formData.profilePicture && (
-            <img
-              src={formData.profilePicture}
-              alt="Profile preview"
-              style={{
-                width: '150px',
-                height: '150px',
-                objectFit: 'cover',
-                borderRadius: '50%',
-                marginTop: '1rem',
-                border: '2px solid #ccc'
-              }}
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          )}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1', minWidth: '200px' }}>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                onChange={handleProfilePictureChange}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box',
+                  marginBottom: '0.5rem'
+                }}
+              />
+              {profilePictureFile && (
+                <button
+                  type="button"
+                  onClick={handleUploadProfilePicture}
+                  disabled={uploadingPicture}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: uploadingPicture ? '#ccc' : '#4caf50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.9rem',
+                    cursor: uploadingPicture ? 'not-allowed' : 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  {uploadingPicture ? 'Uploading...' : 'Upload Picture'}
+                </button>
+              )}
+              <small style={{ display: 'block', color: '#666', marginTop: '0.5rem' }}>
+                Select an image file (JPEG, PNG, GIF, or WebP). Max size: 5MB
+              </small>
+            </div>
+            {(profilePicturePreview || formData.profilePicture) && (
+              <div>
+                <img
+                  src={profilePicturePreview || (formData.profilePicture?.startsWith('http') 
+                    ? formData.profilePicture 
+                    : `http://localhost:5000${formData.profilePicture}`)}
+                  alt="Profile preview"
+                  style={{
+                    width: '150px',
+                    height: '150px',
+                    objectFit: 'cover',
+                    borderRadius: '50%',
+                    border: '2px solid #ccc'
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <button

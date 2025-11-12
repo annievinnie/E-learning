@@ -25,6 +25,11 @@ export const getAllCourses = async (req, res) => {
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
+    // Get user ID for enrollment check
+    const userId = req.user?.userId || req.user?.id;
+    
+    console.log('🔍 getAllCourses - User ID:', userId);
+    
     // Get courses with pagination
     const courses = await Course.find(query)
       .populate('teacher', 'fullName email profilePicture')
@@ -37,7 +42,57 @@ export const getAllCourses = async (req, res) => {
     const total = await Course.countDocuments(query);
     
     // Format courses for frontend
-    const formattedCourses = courses.map(course => {
+    const formattedCourses = courses.map((course, courseIndex) => {
+      // Check if user is enrolled in this course
+      let isEnrolled = false;
+      if (userId && course.students && Array.isArray(course.students) && course.students.length > 0) {
+        // Debug: log first course's students structure
+        if (courseIndex === 0) {
+          console.log('📚 Sample course students array:', JSON.stringify(course.students.slice(0, 2), null, 2));
+          console.log('🔍 User ID to match:', userId.toString());
+        }
+        
+        isEnrolled = course.students.some(student => {
+          try {
+            // New format: { studentId, studentName, enrolledAt }
+            if (student && typeof student === 'object' && student.studentId) {
+              // Handle Mongoose ObjectId - convert both to string for comparison
+              const studentIdStr = student.studentId.toString ? student.studentId.toString() : String(student.studentId);
+              const userIdStr = userId.toString ? userId.toString() : String(userId);
+              const matches = studentIdStr === userIdStr;
+              
+              if (matches && courseIndex === 0) {
+                console.log(`✅ Found enrollment match for course ${course.title}:`, {
+                  studentId: studentIdStr,
+                  userId: userIdStr,
+                  studentName: student.studentName,
+                  match: matches
+                });
+              }
+              return matches;
+            }
+            // Legacy format: direct ObjectId (Mongoose document or string)
+            if (student) {
+              const studentIdStr = student.toString ? student.toString() : String(student);
+              const userIdStr = userId.toString ? userId.toString() : String(userId);
+              const matches = studentIdStr === userIdStr;
+              
+              if (matches && courseIndex === 0) {
+                console.log(`✅ Found enrollment match (legacy format) for course ${course.title}`);
+              }
+              return matches;
+            }
+          } catch (error) {
+            console.error(`Error checking enrollment for course ${course.title}:`, error);
+          }
+          return false;
+        });
+      }
+      
+      // Debug: log enrollment status for first few courses
+      if (courseIndex < 3) {
+        console.log(`📝 Course ${courseIndex + 1}: ${course.title}, isEnrolled: ${isEnrolled}, students count: ${course.students?.length || 0}`);
+      }
       // Format instructor image URL
       let instructorImage = '';
       if (course.teacher?.profilePicture) {
@@ -63,6 +118,7 @@ export const getAllCourses = async (req, res) => {
       price: course.price || 0,
       originalPrice: course.price ? course.price * 1.5 : 0,
       bestseller: course.students?.length > 100,
+      isEnrolled: isEnrolled,
       createdAt: course.createdAt
       };
     });
@@ -261,19 +317,34 @@ export const getEnrolledCourses = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
     
-    // Find courses where student is enrolled (handle both old and new format)
-    const courses = await Course.find({
-      $or: [
-        { 'students.studentId': userId }, // New format
-        { students: userId } // Legacy format
-      ]
-    })
+    console.log(`🔍 Fetching enrolled courses for user: ${userId}`);
+    
+    // Find all courses and filter in memory to handle all formats
+    const allCourses = await Course.find({ status: 'active' })
       .populate('teacher', 'fullName email profilePicture')
       .sort({ createdAt: -1 });
     
+    // Filter courses where student is enrolled (handle all formats)
+    const enrolledCourses = allCourses.filter(course => {
+      if (!course.students || !Array.isArray(course.students)) {
+        return false;
+      }
+      
+      return course.students.some(student => {
+        // New format: { studentId, studentName, enrolledAt }
+        if (typeof student === 'object' && student.studentId) {
+          return student.studentId.toString() === userId.toString();
+        }
+        // Legacy format: direct ObjectId
+        return student.toString() === userId.toString();
+      });
+    });
+    
+    console.log(`✅ Found ${enrolledCourses.length} enrolled courses for user ${userId}`);
+    
     res.status(200).json({
       success: true,
-      courses: courses
+      courses: enrolledCourses
     });
   } catch (error) {
     console.error('Get enrolled courses error:', error);

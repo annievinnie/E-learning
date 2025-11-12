@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
 import CoursesListPage from "./CourseListPage";
+import Footer from "../components/Footer";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -41,12 +42,14 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="bg-light min-vh-100">
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-indigo-50 flex flex-col">
       {/* Main Section */}
-      <main className="py-4">
+      <main className="flex-grow-1">
         <CoursesListPage />
       </main>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

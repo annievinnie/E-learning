@@ -263,6 +263,7 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
     { id: 'students', label: 'Students', icon: '👥' },
     { id: 'teachers', label: 'Teachers', icon: '👨‍🏫' },
     { id: 'courses', label: 'Courses', icon: '📚' },
+    { id: 'payments', label: 'Payments', icon: '💰' },
   ];
 
   const handleNavClick = (sectionId) => {
