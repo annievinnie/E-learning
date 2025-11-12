@@ -41,6 +41,10 @@ const paymentSchema = new mongoose.Schema({
   }
 });
 
+// Create sparse unique index on paymentIntentId (only indexes non-null values)
+// This allows multiple payments with null paymentIntentId (pending payments)
+paymentSchema.index({ paymentIntentId: 1 }, { unique: true, sparse: true });
+
 const Payment = mongoose.model('Payment', paymentSchema);
 
 export default Payment;
