@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import API from '../api';
 import AdminSidebar from '../components/AdminSidebar';
+import AdminDashboardOverview from '../components/admin/AdminDashboardOverview';
+import AdminStudents from '../components/admin/AdminStudents';
+import AdminTeachers from '../components/admin/AdminTeachers';
+import AdminCourses from '../components/admin/AdminCourses';
+import AdminPayments from '../components/admin/AdminPayments';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -10,6 +15,10 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [pendingApplications, setPendingApplications] = useState([]);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [approvalPassword, setApprovalPassword] = useState('');
+  const [approvalPasswordConfirm, setApprovalPasswordConfirm] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -37,6 +46,21 @@ const AdminDashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [lastCheckedApplications, setLastCheckedApplications] = useState([]);
   const [newApplicationsCount, setNewApplicationsCount] = useState(0);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalCourses: 0,
+    pendingApplications: 0,
+    totalRevenue: 0
+  });
+  const [students, setStudents] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState(null); // For filtering courses by teacher
+  const [teacherRevenue, setTeacherRevenue] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [selectedTeacherForRevenue, setSelectedTeacherForRevenue] = useState(null); // For showing teacher revenue details
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -51,6 +75,7 @@ const AdminDashboard = () => {
         setUser(response.data.user);
         if (response.data.user.role === 'admin') {
           fetchPendingApplications();
+          fetchDashboardStats();
         }
         setLoading(false);
       })
@@ -134,6 +159,105 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await API.get('/admin/dashboard/stats');
+      if (response.data.success) {
+        setDashboardStats(response.data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    }
+  };
+
+  const fetchStudents = async () => {
+    setLoadingStudents(true);
+    try {
+      const response = await API.get('/admin/students');
+      if (response.data.success) {
+        setStudents(response.data.students || []);
+      } else {
+        console.error('Failed to fetch students:', response.data);
+        alert(response.data.message || 'Failed to fetch students. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch students. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const fetchCourses = async () => {
+    setLoadingCourses(true);
+    try {
+      const response = await API.get('/admin/courses');
+      if (response.data.success) {
+        setCourses(response.data.courses || []);
+      } else {
+        console.error('Failed to fetch courses:', response.data);
+        alert(response.data.message || 'Failed to fetch courses. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch courses. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  const fetchTeacherRevenue = async () => {
+    setLoadingPayments(true);
+    try {
+      const response = await API.get('/admin/payments/teachers');
+      console.log('Teacher revenue response:', response.data);
+      if (response.data.success) {
+        setTeacherRevenue(response.data.teachers || []);
+      } else {
+        console.error('Failed to fetch teacher revenue:', response.data);
+        alert(response.data.message || 'Failed to fetch teacher revenue. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching teacher revenue:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch teacher revenue. Please try again.';
+      alert(`Error: ${errorMessage} (Status: ${error.response?.status || 'Unknown'})`);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId, courseTitle) => {
+    if (!window.confirm(`Are you sure you want to delete "${courseTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await API.delete(`/admin/courses/${courseId}`);
+      if (response.data.success) {
+        alert('Course deleted successfully!');
+        // Refresh courses list
+        fetchCourses();
+        // Refresh dashboard stats
+        fetchDashboardStats();
+      } else {
+        alert(response.data.message || 'Failed to delete course.');
+      }
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete course. Please try again.';
+      alert(errorMessage);
+    }
+  };
+
   const fetchTeachers = async () => {
     setLoadingTeachers(true);
     try {
@@ -174,19 +298,60 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleApproveApplication = async (applicationId) => {
+  const handleApproveApplication = (application) => {
+    setSelectedApplication(application);
+    setApprovalPassword('');
+    setApprovalPasswordConfirm('');
+    setPasswordError('');
+    setShowPasswordModal(true);
+  };
+
+  const handleSubmitApproval = async () => {
+    // Validate password
+    if (!approvalPassword || approvalPassword.trim() === '') {
+      setPasswordError('Password is required');
+      return;
+    }
+
+    if (approvalPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (approvalPassword !== approvalPasswordConfirm) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setPasswordError('');
+    
     try {
-      await API.post(`/admin/approve-teacher/${applicationId}`);
-      alert('Teacher application approved successfully! Teacher can now login.');
-      // Refresh based on current filter
-      if (teacherFilter === 'pending') {
-        fetchPendingApplications();
-      } else if (teacherFilter === 'approved') {
-        fetchTeachers();
+      const response = await API.post(`/admin/approve-teacher/${selectedApplication._id}`, {
+        password: approvalPassword
+      });
+      
+      if (response.data.success) {
+        alert('Teacher application approved successfully! Password has been set and email sent to teacher.');
+        setShowPasswordModal(false);
+        setApprovalPassword('');
+        setApprovalPasswordConfirm('');
+        setSelectedApplication(null);
+        
+        // Refresh based on current filter
+        if (teacherFilter === 'pending') {
+          fetchPendingApplications();
+        } else if (teacherFilter === 'approved') {
+          fetchTeachers();
+        }
+        // Also refresh dashboard stats
+        fetchDashboardStats();
+      } else {
+        alert(response.data.message || 'Failed to approve application');
       }
     } catch (error) {
       console.error('Error approving application:', error);
-      alert('Failed to approve application');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve application';
+      alert(errorMessage);
     }
   };
 
@@ -229,7 +394,7 @@ const AdminDashboard = () => {
       setEditFormData({ fullName: '', email: '', password: '', isApproved: true });
       setFormErrors({});
       setEditFormErrors({});
-      } else {
+    } else {
       // Fetch data based on current filter when switching to teachers section
       if (teacherFilter === 'approved') {
         fetchTeachers();
@@ -239,6 +404,19 @@ const AdminDashboard = () => {
         fetchRejectedApplications();
       }
     }
+    
+    // Fetch data when switching to students, courses, or payments sections
+    if (section === 'students') {
+      fetchStudents();
+    } else if (section === 'courses') {
+      fetchCourses();
+      setSelectedTeacher(null); // Reset teacher filter when entering courses section
+    } else if (section === 'dashboard') {
+      fetchDashboardStats();
+    } else if (section === 'payments') {
+      fetchTeacherRevenue();
+      setSelectedTeacherForRevenue(null); // Reset selected teacher when entering payments section
+    }
   };
 
   const handleTeacherFormChange = (e) => {
@@ -247,7 +425,12 @@ const AdminDashboard = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
+    // Don't clear errors here - let them clear on blur or submit to avoid re-renders
+  };
+
+  const handleTeacherFormBlur = (e) => {
+    const { name } = e.target;
+    // Clear error when user leaves the field
     if (formErrors[name]) {
       setFormErrors(prev => ({
         ...prev,
@@ -293,8 +476,12 @@ const AdminDashboard = () => {
     setIsSubmitting(true);
 
     try {
-      await API.post('/admin/teachers', teacherFormData);
-      alert('Teacher added successfully!');
+      const response = await API.post('/admin/teachers', teacherFormData);
+      if (response.data.success) {
+        alert(response.data.message || 'Teacher added successfully! Password has been set and email sent to teacher.');
+      } else {
+        alert(response.data.message || 'Teacher added successfully!');
+      }
       
       // Reset form
       setTeacherFormData({ fullName: '', email: '', password: '' });
@@ -303,6 +490,8 @@ const AdminDashboard = () => {
       
       // Refresh teachers list
       fetchTeachers();
+      // Refresh dashboard stats
+      fetchDashboardStats();
     } catch (err) {
       console.error('Error adding teacher:', err);
       const errorMessage = err.response?.data?.message || 'Failed to add teacher. Please try again.';
@@ -828,537 +1017,73 @@ const AdminDashboard = () => {
     switch (activeSection) {
       case 'dashboard':
         return (
-          <div>
-            <div style={{ marginBottom: '2rem' }}>
-              <PageTitle>Dashboard Overview</PageTitle>
-              <PageSubtitle>
-                Welcome back, {user?.fullName}! Here's what's happening on your platform.
-              </PageSubtitle>
-            </div>
-
-            <StatsGrid>
-              <StatCard color1="#56ab2f" color2="#a8e063">
-                <StatTitle>Total Students</StatTitle>
-                <StatValue>1,234</StatValue>
-              </StatCard>
-
-              <StatCard color1="#f6d365" color2="#fda085">
-                <StatTitle>Total Teachers</StatTitle>
-                <StatValue>{teachers.length || 56}</StatValue>
-              </StatCard>
-
-              <StatCard color1="#667eea" color2="#764ba2">
-                <StatTitle>Active Courses</StatTitle>
-                <StatValue>89</StatValue>
-              </StatCard>
-
-              <StatCard color1="#f093fb" color2="#f5576c">
-                <StatTitle>Pending Applications</StatTitle>
-                <StatValue>{pendingApplications.length}</StatValue>
-              </StatCard>
-            </StatsGrid>
-          </div>
+          <AdminDashboardOverview 
+            user={user}
+            dashboardStats={dashboardStats}
+          />
         );
 
       case 'students':
         return (
-          <div>
-            <PageTitle>Students Management</PageTitle>
-            <SectionCard>
-              <SectionTitle>Student Management Features</SectionTitle>
-              <p style={{ color: '#666', fontSize: '1.1rem' }}>Student management features will be implemented here.</p>
-            </SectionCard>
-          </div>
+          <AdminStudents
+            students={students}
+            loadingStudents={loadingStudents}
+            onRefresh={fetchStudents}
+            onRefreshDashboardStats={fetchDashboardStats}
+          />
         );
 
       case 'teachers':
         return (
+          <AdminTeachers
+            teacherFilter={teacherFilter}
+            onFilterChange={handleFilterChange}
+            pendingApplications={pendingApplications}
+            rejectedApplications={rejectedApplications}
+            teachers={teachers}
+            loadingTeachers={loadingTeachers}
+            showAddTeacherForm={showAddTeacherForm}
+            onShowAddTeacherForm={setShowAddTeacherForm}
+            onRefreshTeachers={fetchTeachers}
+            onRefreshPending={fetchPendingApplications}
+            onRefreshRejected={fetchRejectedApplications}
+            onRefreshDashboardStats={fetchDashboardStats}
+          />
+        );
+
+      case 'courses':
+        return (
+          <AdminCourses
+            courses={courses}
+            loadingCourses={loadingCourses}
+            selectedTeacher={selectedTeacher}
+            onTeacherSelect={setSelectedTeacher}
+            onRefresh={fetchCourses}
+            onDeleteCourse={handleDeleteCourse}
+          />
+        );
+
+      case 'analytics':
+        return (
           <div>
-            <HeaderActions>
-              <PageTitle style={{ marginBottom: 0 }}>Teachers Management</PageTitle>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <label style={{ fontWeight: '600', color: '#333', fontSize: '1rem' }}>Filter:</label>
-                  <FilterSelect
-                    value={teacherFilter}
-                    onChange={(e) => handleFilterChange(e.target.value)}
-                  >
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="deleted">Deleted</option>
-                  </FilterSelect>
-                </div>
-                {teacherFilter === 'approved' && (
-                  <Button variant="success" onClick={() => setShowAddTeacherForm(true)}>
-                    + Add Teacher
-                  </Button>
-                )}
-              </div>
-            </HeaderActions>
-
-            {/* Filter-based content display */}
-            {teacherFilter === 'pending' && (
-              <SectionCard>
-                <SectionTitle>
-                  Pending Teacher Applications ({pendingApplications.length})
-                </SectionTitle>
-                {loadingTeachers ? (
-                  <EmptyState>Loading applications...</EmptyState>
-                ) : pendingApplications.length === 0 ? (
-                  <EmptyState>No pending applications found.</EmptyState>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {pendingApplications.map((application) => (
-                      <ApplicationCard key={application._id} status="pending">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                          <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: '0 0 0.5rem 0', color: '#e65100', fontSize: '1.2rem' }}>
-                              {application.fullName}
-                            </h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
-                                <strong>Email:</strong> {application.email}
-                              </p>
-                              {application.age && (
-                                <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
-                                  <strong>Age:</strong> {application.age}
-                                </p>
-                              )}
-                              {application.phone && (
-                                <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
-                                  <strong>Phone:</strong> {application.phone}
-                                </p>
-                              )}
-                              {application.confidenceLevel && (
-                                <p style={{ margin: '0', color: '#666', fontSize: '0.9rem' }}>
-                                  <strong>Confidence Level:</strong> {application.confidenceLevel}
-                                </p>
-                              )}
-                            </div>
-                            {application.teachingExperience && (
-                              <p style={{ margin: '0.5rem 0', color: '#666', fontSize: '0.9rem' }}>
-                                <strong>Experience:</strong> {application.teachingExperience}
-                              </p>
-                            )}
-                            {application.coursesKnown && application.coursesKnown.length > 0 && (
-                              <div style={{ margin: '0.5rem 0' }}>
-                                <strong style={{ color: '#666', fontSize: '0.9rem' }}>Courses:</strong>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                  {application.coursesKnown.map((course, idx) => (
-                                    <span key={idx} style={{
-                                      background: '#e3f2fd',
-                                      color: '#1976d2',
-                                      padding: '0.25rem 0.75rem',
-                                      borderRadius: '12px',
-                                      fontSize: '0.85rem'
-                                    }}>
-                                      {course}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#999' }}>
-                              Applied: {application.createdAt ? new Date(application.createdAt).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <Button variant="success" size="small" onClick={() => handleApproveApplication(application._id)}>
-                              Approve
-                            </Button>
-                            <Button variant="danger" size="small" onClick={() => openRejectionModal(application)}>
-                              Reject
-                            </Button>
-                          </div>
-                        </div>
-                      </ApplicationCard>
-                    ))}
-                  </div>
-                )}
-              </SectionCard>
-            )}
-
-            {teacherFilter === 'rejected' && (
-              <SectionCard>
-                <SectionTitle>
-                  Rejected Teacher Applications ({rejectedApplications.length})
-                </SectionTitle>
-                {loadingTeachers ? (
-                  <EmptyState>Loading applications...</EmptyState>
-                ) : rejectedApplications.length === 0 ? (
-                  <EmptyState>No rejected applications found.</EmptyState>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {rejectedApplications.map((application) => (
-                      <ApplicationCard key={application._id} status="rejected">
-                        <div>
-                          <h4 style={{ margin: '0 0 0.5rem 0', color: '#c62828' }}>
-                            {application.fullName}
-                          </h4>
-                          <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>
-                            Email: {application.email}
-                          </p>
-                          {application.rejectionReason && (
-                            <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontStyle: 'italic' }}>
-                              Reason: {application.rejectionReason}
-                            </p>
-                          )}
-                          <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>
-                            Rejected: {application.reviewedAt ? new Date(application.reviewedAt).toLocaleDateString() : 'N/A'}
-                          </p>
-                        </div>
-                      </ApplicationCard>
-                    ))}
-                  </div>
-                )}
-              </SectionCard>
-            )}
-
-            {teacherFilter === 'deleted' && (
-              <SectionCard>
-                <SectionTitle>Deleted Teachers</SectionTitle>
-                <EmptyState>
-                  Deleted teachers cannot be viewed as they have been permanently removed from the system.
-                </EmptyState>
-              </SectionCard>
-            )}
-
-            {/* Add Teacher Form - only show for approved filter */}
-            {teacherFilter === 'approved' && showAddTeacherForm && (
-              <SectionCard>
-                <SectionTitle>Add New Teacher</SectionTitle>
-                <form onSubmit={handleAddTeacher}>
-                  <FormGroup>
-                    <FormLabel>Full Name *</FormLabel>
-                    <FormInput
-                      type="text"
-                      name="fullName"
-                      value={teacherFormData.fullName}
-                      onChange={handleTeacherFormChange}
-                      error={formErrors.fullName}
-                      placeholder="Enter teacher's full name"
-                    />
-                    {formErrors.fullName && <ErrorText>{formErrors.fullName}</ErrorText>}
-                  </FormGroup>
-
-                  <FormGroup>
-                    <FormLabel>Email *</FormLabel>
-                    <FormInput
-                      type="email"
-                      name="email"
-                      value={teacherFormData.email}
-                      onChange={handleTeacherFormChange}
-                      error={formErrors.email}
-                      placeholder="Enter teacher's email"
-                    />
-                    {formErrors.email && <ErrorText>{formErrors.email}</ErrorText>}
-                  </FormGroup>
-
-                  <FormGroup>
-                    <FormLabel>Password *</FormLabel>
-                    <FormInput
-                      type="password"
-                      name="password"
-                      value={teacherFormData.password}
-                      onChange={handleTeacherFormChange}
-                      error={formErrors.password}
-                      placeholder="Enter password (min 6 characters)"
-                    />
-                    {formErrors.password && <ErrorText>{formErrors.password}</ErrorText>}
-                  </FormGroup>
-
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <Button type="submit" variant="success" disabled={isSubmitting}>
-                      {isSubmitting ? 'Adding...' : 'Add Teacher'}
-                    </Button>
-                    <Button type="button" variant="secondary" onClick={handleCancelAddTeacher} disabled={isSubmitting}>
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              </SectionCard>
-            )}
-
-            {/* Approved Teachers List */}
-            {teacherFilter === 'approved' && (
-              <SectionCard>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <SectionTitle style={{ marginBottom: 0 }}>
-                    Approved Teachers ({teachers.filter(t => t.isApproved).length})
-                  </SectionTitle>
-                  <Button variant="primary" size="small" onClick={fetchTeachers}>
-                    Refresh
-                  </Button>
-                </div>
-
-                {loadingTeachers ? (
-                  <EmptyState>Loading teachers...</EmptyState>
-                ) : teachers.filter(t => t.isApproved).length === 0 ? (
-                  <EmptyState>No approved teachers found. Add a teacher to get started.</EmptyState>
-                ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    marginTop: '1rem'
-                  }}>
-                    <thead>
-                      <tr style={{ 
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        borderBottom: '2px solid #667eea',
-                        color: 'white'
-                      }}>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600' }}>Name</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600' }}>Email</th>
-                        <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600' }}>Status</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600' }}>Joined</th>
-                        <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teachers.filter(t => t.isApproved).map((teacher) => (
-                        <tr 
-                          key={teacher.id || teacher._id} 
-                          style={{ 
-                            borderBottom: '1px solid #eee',
-                            transition: 'all 0.2s ease',
-                            cursor: 'pointer'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <td style={{ padding: '1rem', fontWeight: '500' }}>{teacher.fullName}</td>
-                          <td style={{ padding: '1rem', color: '#666' }}>{teacher.email}</td>
-                          <td style={{ padding: '1rem', textAlign: 'center' }}>
-                            <span style={{
-                              padding: '0.35rem 0.85rem',
-                              borderRadius: '20px',
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              background: 'linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)',
-                              color: 'white',
-                              display: 'inline-block',
-                              boxShadow: '0 2px 8px rgba(86, 171, 47, 0.3)'
-                            }}>
-                              {teacher.isApproved ? 'Approved' : 'Pending'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '1rem', color: '#666' }}>
-                            {teacher.createdAt ? new Date(teacher.createdAt).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td style={{ padding: '1rem', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                              <Button variant="primary" size="small" onClick={() => handleEditTeacher(teacher)}>
-                                Edit
-                              </Button>
-                              <Button variant="danger" size="small" onClick={() => handleDeleteTeacher(teacher.id || teacher._id)}>
-                                Delete
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                )}
-              </SectionCard>
-            )}
-
-            {/* Edit Teacher Form Modal */}
-            {showEditTeacherForm && editingTeacher && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: 1000
-              }}>
-                <div style={{
-                  backgroundColor: 'white',
-                  padding: '2rem',
-                  borderRadius: '8px',
-                  maxWidth: '500px',
-                  width: '90%',
-                  maxHeight: '90vh',
-                  overflowY: 'auto'
-                }}>
-                  <h3 style={{ color: '#1976d2', marginTop: 0, marginBottom: '1.5rem', fontSize: '1.5rem' }}>
-                    Edit Teacher
-                  </h3>
-
-                  <form onSubmit={handleUpdateTeacher}>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '0.5rem',
-                        fontWeight: '500',
-                        color: '#333'
-                      }}>
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="fullName"
-                        value={editFormData.fullName}
-                        onChange={handleEditFormChange}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: `1px solid ${editFormErrors.fullName ? '#f44336' : '#ccc'}`,
-                          borderRadius: '4px',
-                          fontSize: '1rem',
-                          boxSizing: 'border-box'
-                        }}
-                        placeholder="Enter teacher's full name"
-                      />
-                      {editFormErrors.fullName && (
-                        <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                          {editFormErrors.fullName}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '0.5rem',
-                        fontWeight: '500',
-                        color: '#333'
-                      }}>
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={editFormData.email}
-                        onChange={handleEditFormChange}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: `1px solid ${editFormErrors.email ? '#f44336' : '#ccc'}`,
-                          borderRadius: '4px',
-                          fontSize: '1rem',
-                          boxSizing: 'border-box'
-                        }}
-                        placeholder="Enter teacher's email"
-                      />
-                      {editFormErrors.email && (
-                        <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                          {editFormErrors.email}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '0.5rem',
-                        fontWeight: '500',
-                        color: '#333'
-                      }}>
-                        Password (leave blank to keep current)
-                      </label>
-                      <input
-                        type="password"
-                        name="password"
-                        value={editFormData.password}
-                        onChange={handleEditFormChange}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: `1px solid ${editFormErrors.password ? '#f44336' : '#ccc'}`,
-                          borderRadius: '4px',
-                          fontSize: '1rem',
-                          boxSizing: 'border-box'
-                        }}
-                        placeholder="Enter new password (optional)"
-                      />
-                      {editFormErrors.password && (
-                        <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                          {editFormErrors.password}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontWeight: '500',
-                        color: '#333',
-                        cursor: 'pointer'
-                      }}>
-                        <input
-                          type="checkbox"
-                          name="isApproved"
-                          checked={editFormData.isApproved}
-                          onChange={handleEditFormChange}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <span>Teacher is approved</span>
-                      </label>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={handleCancelEditTeacher}
-                        disabled={isSubmitting}
-                        style={{
-                          backgroundColor: '#f5f5f5',
-                          color: '#666',
-                          border: '1px solid #ccc',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '4px',
-                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                          fontSize: '1rem',
-                          fontWeight: '500'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        style={{
-                          backgroundColor: '#1976d2',
-                          color: 'white',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '4px',
-                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                          fontSize: '1rem',
-                          fontWeight: '500',
-                          opacity: isSubmitting ? 0.7 : 1
-                        }}
-                      >
-                        {isSubmitting ? 'Updating...' : 'Update Teacher'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
+            <PageTitle>Analytics</PageTitle>
+            <SectionCard>
+              <SectionTitle>Analytics & Reporting</SectionTitle>
+              <p style={{ color: '#666', fontSize: '1.1rem' }}>Analytics and reporting features will be implemented here.</p>
+            </SectionCard>
           </div>
         );
 
       case 'courses':
         return (
-          <div>
-            <PageTitle>Courses Management</PageTitle>
-            <SectionCard>
-              <SectionTitle>Course Management Features</SectionTitle>
-              <p style={{ color: '#666', fontSize: '1.1rem' }}>Course management features will be implemented here.</p>
-            </SectionCard>
-          </div>
+          <AdminCourses
+            courses={courses}
+            loadingCourses={loadingCourses}
+            selectedTeacher={selectedTeacher}
+            onTeacherSelect={setSelectedTeacher}
+            onRefresh={fetchCourses}
+            onDeleteCourse={handleDeleteCourse}
+          />
         );
 
       case 'analytics':
@@ -1403,6 +1128,18 @@ const AdminDashboard = () => {
               <p style={{ color: '#666', fontSize: '1.1rem' }}>Report generation and export features will be implemented here.</p>
             </SectionCard>
           </div>
+        );
+
+      case 'payments':
+        return (
+          <AdminPayments
+            teacherRevenue={teacherRevenue}
+            loadingPayments={loadingPayments}
+            selectedTeacherForRevenue={selectedTeacherForRevenue}
+            onTeacherSelect={setSelectedTeacherForRevenue}
+            onShowAllTeachers={() => setSelectedTeacherForRevenue(null)}
+            onRefresh={fetchTeacherRevenue}
+          />
         );
 
       default:
@@ -1536,85 +1273,6 @@ const AdminDashboard = () => {
         </div>
 
         {renderContent()}
-
-        {/* Rejection Modal (rendered at top-level so it isn't nested incorrectly) */}
-        {showApprovalModal && selectedApplication && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              padding: '2rem',
-              borderRadius: '8px',
-              maxWidth: '500px',
-              width: '90%'
-            }}>
-              <h3 style={{ marginTop: 0, color: '#f44336' }}>Reject Teacher Application</h3>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to reject {selectedApplication?.fullName}'s application?
-              </p>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                  Reason for rejection (optional):
-                </label>
-                <textarea
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                  placeholder="Enter reason for rejection..."
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    setShowApprovalModal(false);
-                    setSelectedApplication(null);
-                    setRejectionReason('');
-                  }}
-                  style={{
-                    backgroundColor: '#666',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleRejectApplication(selectedApplication._id, rejectionReason)}
-                  style={{
-                    backgroundColor: '#f44336',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Reject Application
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </ContentWrapper>
     </DashboardContainer>
   );

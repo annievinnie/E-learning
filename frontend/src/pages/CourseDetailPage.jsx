@@ -16,6 +16,8 @@ import {
   Award,
 } from "lucide-react";
 import API from "../api";
+import Footer from "../components/Footer";
+import StudentBecomeInstructor from "../components/student/StudentBecomeInstructor";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
@@ -32,6 +34,30 @@ const CourseDetailPage = () => {
     fetchCourseDetails();
   }, [id]);
 
+  // Refresh enrollment status when component becomes visible (e.g., returning from payment)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh course details when window regains focus (user returns from Stripe)
+      if (document.visibilityState === 'visible') {
+        fetchCourseDetails();
+      }
+    };
+
+    // Check if we're returning from payment success page
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('enrolled') === 'true') {
+      fetchCourseDetails();
+    }
+
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [id]);
+
   const fetchCourseDetails = async () => {
     try {
       const response = await API.get(`/student/courses/${id}`);
@@ -45,7 +71,10 @@ const CourseDetailPage = () => {
           }
         }
         setCourse(courseData);
-        setIsEnrolled(courseData.isEnrolled || false);
+        // Check enrollment status - ensure it's properly set
+        const enrolled = courseData.isEnrolled === true || courseData.isEnrolled === 'true';
+        setIsEnrolled(enrolled);
+        console.log('Course enrollment status:', enrolled, 'for course:', courseData.title);
       }
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -94,11 +123,25 @@ const CourseDetailPage = () => {
         // Paid course - redirect to Stripe checkout
         const response = await API.post(`/payment/checkout/${id}`);
         
+        console.log('Payment checkout response:', response.data);
+        
         if (response.data.success && response.data.url) {
-          // Redirect to Stripe checkout
-          window.location.href = response.data.url;
+          const checkoutUrl = response.data.url;
+          
+          // Validate URL before redirecting
+          try {
+            new URL(checkoutUrl);
+            // Redirect to Stripe checkout
+            window.location.href = checkoutUrl;
+          } catch (urlError) {
+            console.error('Invalid checkout URL:', checkoutUrl);
+            alert('Invalid payment URL received. Please contact support.');
+            setEnrolling(false);
+          }
         } else {
-          alert(response.data?.message || 'Failed to create checkout session. Please try again.');
+          const errorMsg = response.data?.message || 'Failed to create checkout session. Please try again.';
+          console.error('Checkout failed:', errorMsg, response.data);
+          alert(errorMsg);
           setEnrolling(false);
         }
       }
@@ -106,20 +149,30 @@ const CourseDetailPage = () => {
       console.error('Enrollment error:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
+      console.error('Full error:', error);
       
       // Get the actual error message from the backend
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to enroll. Please try again.';
+      let errorMessage = error.response?.data?.message || error.message || 'Failed to enroll. Please try again.';
       
+      // Handle specific error cases
       if (error.response?.status === 400) {
         if (errorMessage.includes('already enrolled')) {
           setIsEnrolled(true);
           alert('You are already enrolled in this course!');
           fetchCourseDetails();
+          return;
         } else {
           alert(errorMessage);
         }
       } else if (error.response?.status === 500) {
-        alert(errorMessage);
+        // Check if it's a payment configuration error
+        if (errorMessage.includes('configuration') || errorMessage.includes('Payment service')) {
+          alert('Payment service is not configured. Please contact the administrator.');
+        } else {
+          alert(errorMessage);
+        }
+      } else if (error.code === 'ERR_NETWORK' || !error.response) {
+        alert('Network error: Could not connect to the server. Please check your connection and try again.');
       } else {
         alert(errorMessage);
       }
@@ -173,7 +226,7 @@ const CourseDetailPage = () => {
   ];
 
   return (
-    <div className="bg-light">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-indigo-50 flex flex-col">
       {/* Hero Section */}
       <section className="py-5 text-white" style={{ background: "linear-gradient(to right, #4f46e5, #7c3aed)" }}>
         <div className="container">
@@ -375,27 +428,13 @@ const CourseDetailPage = () => {
         </div>
       </div>
 
-      {/* Footer CTA */}
-      <section
-        className="text-white text-center py-5"
-        style={{ background: "linear-gradient(to right, #4f46e5, #7c3aed)" }}
-      >
-        <Award size={48} className="mb-3" />
-        <h3 className="fw-bold">Become an Instructor</h3>
-        <p className="mb-4">
-          Share your knowledge and earn by teaching students worldwide.
-        </p>
-        <button className="btn btn-light px-4 py-2 fw-semibold">
-          Start Teaching Today
-        </button>
-      </section>
+      {/* Become Instructor CTA */}
+      <div className="container py-5">
+        <StudentBecomeInstructor />
+      </div>
 
       {/* Footer */}
-      <footer className="bg-dark text-white py-4 mt-5">
-        <div className="container text-center">
-          <p className="mb-0">© 2025 LearnHub — All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

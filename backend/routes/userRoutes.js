@@ -7,6 +7,7 @@ import {
   resetPassword, 
   getUserProfile,
   updateProfile,
+  uploadProfilePicture,
   submitTeacherApplication,
   getPendingTeacherApplications,
   approveTeacherApplication,
@@ -15,8 +16,16 @@ import {
   getAllTeachers,
   createTeacher,
   updateTeacher,
-  deleteTeacher
+  deleteTeacher,
+  getDashboardStats,
+  getAllStudents,
+  updateStudent,
+  deleteStudent,
+  getAllCourses,
+  deleteCourseAdmin,
+  getTeacherRevenue
 } from "../controllers/userController.js";
+import { uploadProfilePicture as uploadProfilePictureMiddleware } from "../middleware/profilePictureUploadMiddleware.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -53,6 +62,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", verifyToken, getUserProfile);
 router.put("/profile", verifyToken, updateProfile);
+router.post("/profile/picture", verifyToken, uploadProfilePictureMiddleware, uploadProfilePicture);
 
 // Public teacher application route
 router.post("/teacher/apply", (req, res, next) => {
@@ -76,6 +86,15 @@ router.get("/admin/teachers", verifyToken, getAllTeachers);
 router.post("/admin/teachers", verifyToken, createTeacher);
 router.put("/admin/teachers/:teacherId", verifyToken, updateTeacher);
 router.delete("/admin/teachers/:teacherId", verifyToken, deleteTeacher);
+
+// Admin routes for dashboard and management
+router.get("/admin/dashboard/stats", verifyToken, getDashboardStats);
+router.get("/admin/students", verifyToken, getAllStudents);
+router.put("/admin/students/:studentId", verifyToken, updateStudent);
+router.delete("/admin/students/:studentId", verifyToken, deleteStudent);
+router.get("/admin/courses", verifyToken, getAllCourses);
+router.delete("/admin/courses/:courseId", verifyToken, deleteCourseAdmin);
+router.get("/admin/payments/teachers", verifyToken, getTeacherRevenue);
 //router.post("/admin/teachers/:teacherId/set-password", verifyToken, verifyAdmin, setTeacherPassword);
 
 export default router;

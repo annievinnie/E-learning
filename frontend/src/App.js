@@ -12,7 +12,8 @@ import Navbar from "./components/Navbar";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
-import TeacherApplicationForm from "./pages/TeacherApplicationForm";
+import TeacherApplicationForm from "./components/teacher/TeacherApplicationForm";
+import StudentMyCourses from "./components/student/StudentMyCourses";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/teacher-application" element={<TeacherApplicationForm />} />
+        <Route path="/my-courses" element={<StudentMyCourses />} />
       </Routes>
     </BrowserRouter>
   );

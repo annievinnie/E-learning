@@ -181,19 +181,42 @@ const Navbar = () => {
         </Logo>
 
         <NavLinks>
-          <NavLink onClick={handleHome} active={location.pathname === '/'}>
-            Home
-          </NavLink>
-          
-          <NavLink onClick={handleContact} active={location.pathname === '/contact'}>
-            Contact Us
-          </NavLink>
+          {/* Hide Home and Contact Us when admin is on AdminDashboard */}
+          {!(isLoggedIn && user?.role === 'admin' && location.pathname === '/AdminDashboard') && (
+            <>
+              {/* Hide Home for all logged-in users, but keep Contact Us */}
+              {!isLoggedIn && (
+                <NavLink onClick={handleHome} active={location.pathname === '/'}>
+                  Home
+                </NavLink>
+              )}
+            </>
+          )}
           
           {isLoggedIn && (
-            <NavLink onClick={handleDashboard} active={
-              location.pathname.includes('/dashboard')
-            }>
-              Dashboard
+            <>
+              <NavLink onClick={handleDashboard} active={
+                location.pathname.includes('/dashboard')
+              }>
+                Dashboard
+              </NavLink>
+              {user?.role === 'student' && (
+                <NavLink 
+                  onClick={() => {
+                    navigate('/my-courses');
+                    setIsMenuOpen(false);
+                  }} 
+                  active={location.pathname === '/my-courses'}
+                >
+                  My Courses
+                </NavLink>
+              )}
+            </>
+          )}
+          
+          {!(isLoggedIn && user?.role === 'admin' && location.pathname === '/AdminDashboard') && (
+            <NavLink onClick={handleContact} active={location.pathname === '/contact'}>
+              Contact Us
             </NavLink>
           )}
         </NavLinks>
@@ -213,7 +236,12 @@ const Navbar = () => {
                   $hasImage={!!user?.profilePicture}
                 >
                   {user?.profilePicture ? (
-                    <AvatarImage src={user.profilePicture} alt={user?.fullName} />
+                    <AvatarImage 
+                      src={user.profilePicture.startsWith('http') 
+                        ? user.profilePicture 
+                        : `http://localhost:5000${user.profilePicture}`} 
+                      alt={user?.fullName} 
+                    />
                   ) : (
                     <AvatarText>
                       {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
@@ -257,19 +285,42 @@ const Navbar = () => {
       {/* Mobile Menu */}
       {isMenuOpen && (
         <MobileMenu>
-          <MobileNavLink onClick={handleHome} active={location.pathname === '/'}>
-            Home
-          </MobileNavLink>
-          
-          <MobileNavLink onClick={handleContact} active={location.pathname === '/contact'}>
-            Contact Us
-          </MobileNavLink>
+          {/* Hide Home and Contact Us when admin is on AdminDashboard */}
+          {!(isLoggedIn && user?.role === 'admin' && location.pathname === '/AdminDashboard') && (
+            <>
+              {/* Hide Home for all logged-in users, but keep Contact Us */}
+              {!isLoggedIn && (
+                <MobileNavLink onClick={handleHome} active={location.pathname === '/'}>
+                  Home
+                </MobileNavLink>
+              )}
+            </>
+          )}
           
           {isLoggedIn && (
-            <MobileNavLink onClick={handleDashboard} active={
-              location.pathname.includes('/dashboard')
-            }>
-              Dashboard
+            <>
+              <MobileNavLink onClick={handleDashboard} active={
+                location.pathname.includes('/dashboard')
+              }>
+                Dashboard
+              </MobileNavLink>
+              {user?.role === 'student' && (
+                <MobileNavLink 
+                  onClick={() => {
+                    navigate('/my-courses');
+                    setIsMenuOpen(false);
+                  }} 
+                  active={location.pathname === '/my-courses'}
+                >
+                  My Courses
+                </MobileNavLink>
+              )}
+            </>
+          )}
+          
+          {!(isLoggedIn && user?.role === 'admin' && location.pathname === '/AdminDashboard') && (
+            <MobileNavLink onClick={handleContact} active={location.pathname === '/contact'}>
+              Contact Us
             </MobileNavLink>
           )}
 

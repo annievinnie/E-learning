@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
+import API from '../api';
 
 // API function for reset password
 const resetPasswordAPI = async (token, password) => {
-    const response = await fetch('http://localhost:5001/api/reset-password', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token, password }),
-    });
-    
-    const data = await response.json();
-    return { success: response.ok, data };
+    try {
+        const response = await API.post('/reset-password', { token, password });
+        return { success: true, data: response.data };
+    } catch (error) {
+        return { 
+            success: false, 
+            data: error.response?.data || { message: error.message || 'Network error. Please check your connection and try again.' }
+        };
+    }
 };
 
 const styles = {
@@ -50,10 +51,29 @@ const styles = {
   input: {
     width: '100%',
     padding: '12px',
+    paddingRight: '45px',
     margin: '10px 0',
     border: '1px solid #ccc',
     borderRadius: '4px',
     boxSizing: 'border-box',
+  },
+  inputWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: '10px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#757575',
   },
   button: {
     width: '100%',
@@ -102,6 +122,16 @@ const ResetPasswordPage = () => {
     const [message, setMessage] = useState('');
     const [success, setSuccess] = useState(false);
     const [token, setToken] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [password, setPassword] = useState('');
+    const [passwordRequirements, setPasswordRequirements] = useState({
+        minLength: false,
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecialChar: false
+    });
 
     useEffect(() => {
         const tokenFromUrl = searchParams.get('token');
@@ -112,6 +142,19 @@ const ResetPasswordPage = () => {
             setToken(tokenFromUrl);
         }
     }, [searchParams]);
+
+    // Password validation function
+    const validatePassword = (pwd) => {
+        const requirements = {
+            minLength: pwd.length >= 8,
+            hasUppercase: /[A-Z]/.test(pwd),
+            hasLowercase: /[a-z]/.test(pwd),
+            hasNumber: /[0-9]/.test(pwd),
+            hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
+        };
+        setPasswordRequirements(requirements);
+        return Object.values(requirements).every(req => req === true);
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -131,8 +174,8 @@ const ResetPasswordPage = () => {
             return;
         }
 
-        if (password.length < 6) {
-            setPasswordError('Password must be at least 6 characters long');
+        if (!validatePassword(password)) {
+            setPasswordError('Password does not meet all requirements');
             setLoader(false);
             return;
         }
@@ -154,25 +197,36 @@ const ResetPasswordPage = () => {
             setLoader(false);
             
             if (result.success) {
-                setMessage(result.data.message);
+                setMessage(result.data.message || 'Password has been reset successfully!');
                 setSuccess(true);
                 // Redirect to login after 3 seconds
                 setTimeout(() => {
-                    navigate('/');
+                    navigate('/login');
                 }, 3000);
             } else {
-                setMessage(result.data.message || 'Something went wrong. Please try again.');
+                // Show specific error message from backend
+                const errorMsg = result.data?.message || 'Something went wrong. Please try again.';
+                setMessage(errorMsg);
                 setSuccess(false);
             }
         } catch (error) {
             setLoader(false);
-            setMessage('Network error. Please check your connection and try again.');
+            console.error('Reset password error:', error);
+            // This catch block should rarely be hit now since resetPasswordAPI handles errors
+            setMessage(error.message || 'Network error. Please check your connection and try again.');
             setSuccess(false);
         }
     };
 
-    const handleInputChange = () => {
+    const handlePasswordChange = (e) => {
+        const newPassword = e.target.value;
+        setPassword(newPassword);
+        validatePassword(newPassword);
         setPasswordError('');
+        setMessage('');
+    };
+
+    const handleConfirmPasswordChange = () => {
         setConfirmPasswordError('');
         setMessage('');
     };
@@ -190,27 +244,123 @@ const ResetPasswordPage = () => {
                     </p>
 
                     <form onSubmit={handleSubmit} noValidate>
-                        <label>
+                        <label style={{ display: 'block', position: 'relative' }}>
                             {passwordError && <span style={styles.errorText}>{passwordError}</span>}
-                            <input
-                                type="password"
-                                name="password"
-                                placeholder="Enter new password"
-                                style={{...styles.input, borderColor: passwordError ? 'red' : '#ccc'}}
-                                onChange={handleInputChange}
-                                autoFocus
-                            />
+                            <div style={styles.inputWrapper}>
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    placeholder="Enter new password"
+                                    value={password}
+                                    style={{
+                                        ...styles.input, 
+                                        borderColor: passwordError ? 'red' : '#ccc',
+                                        paddingRight: '45px'
+                                    }}
+                                    onChange={handlePasswordChange}
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={styles.eyeButton}
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
+                            
+                            {/* Password Requirements */}
+                            {password && (
+                                <div style={{
+                                    marginTop: '8px',
+                                    padding: '10px',
+                                    backgroundColor: '#f5f5f5',
+                                    borderRadius: '4px',
+                                    fontSize: '0.85rem'
+                                }}>
+                                    <div style={{ marginBottom: '4px', fontWeight: '500', color: '#333' }}>
+                                        Password Requirements:
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            color: passwordRequirements.minLength ? '#4caf50' : '#757575'
+                                        }}>
+                                            <span style={{ marginRight: '8px', fontSize: '14px' }}>
+                                                {passwordRequirements.minLength ? '✓' : '○'}
+                                            </span>
+                                            At least 8 characters
+                                        </div>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            color: passwordRequirements.hasUppercase ? '#4caf50' : '#757575'
+                                        }}>
+                                            <span style={{ marginRight: '8px', fontSize: '14px' }}>
+                                                {passwordRequirements.hasUppercase ? '✓' : '○'}
+                                            </span>
+                                            One uppercase letter (A-Z)
+                                        </div>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            color: passwordRequirements.hasLowercase ? '#4caf50' : '#757575'
+                                        }}>
+                                            <span style={{ marginRight: '8px', fontSize: '14px' }}>
+                                                {passwordRequirements.hasLowercase ? '✓' : '○'}
+                                            </span>
+                                            One lowercase letter (a-z)
+                                        </div>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            color: passwordRequirements.hasNumber ? '#4caf50' : '#757575'
+                                        }}>
+                                            <span style={{ marginRight: '8px', fontSize: '14px' }}>
+                                                {passwordRequirements.hasNumber ? '✓' : '○'}
+                                            </span>
+                                            One number (0-9)
+                                        </div>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            color: passwordRequirements.hasSpecialChar ? '#4caf50' : '#757575'
+                                        }}>
+                                            <span style={{ marginRight: '8px', fontSize: '14px' }}>
+                                                {passwordRequirements.hasSpecialChar ? '✓' : '○'}
+                                            </span>
+                                            One special character (!@#$%^&* etc.)
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </label>
 
-                        <label>
+                        <label style={{ display: 'block', position: 'relative' }}>
                             {confirmPasswordError && <span style={styles.errorText}>{confirmPasswordError}</span>}
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                placeholder="Confirm new password"
-                                style={{...styles.input, borderColor: confirmPasswordError ? 'red' : '#ccc'}}
-                                onChange={handleInputChange}
-                            />
+                            <div style={styles.inputWrapper}>
+                                <input
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    name="confirmPassword"
+                                    placeholder="Confirm new password"
+                                    style={{
+                                        ...styles.input, 
+                                        borderColor: confirmPasswordError ? 'red' : '#ccc',
+                                        paddingRight: '45px'
+                                    }}
+                                    onChange={handleConfirmPasswordChange}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    style={styles.eyeButton}
+                                    tabIndex={-1}
+                                >
+                                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </label>
                         
                         {/* Display the message/result of the submission */}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import API from '../api';
 
 // A simple internal style object for a clean look, mirroring the LoginPage styles
 const styles = {
@@ -88,16 +89,15 @@ const styles = {
 
 // API function for forgot password
 const forgotPasswordAPI = async (email) => {
-    const response = await fetch('http://localhost:5001/api/forgot-password', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-    });
-    
-    const data = await response.json();
-    return { success: response.ok, data };
+    try {
+        const response = await API.post('/forgot-password', { email });
+        return { success: true, data: response.data };
+    } catch (error) {
+        return { 
+            success: false, 
+            data: error.response?.data || { message: error.message || 'Network error. Please check your connection and try again.' }
+        };
+    }
 };
 
 // ------------------ ForgetPasswordPage Component ------------------
