@@ -64,10 +64,14 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-    // Check if already enrolled
-    const isEnrolled = course.students.some(
-      studentId => studentId.toString() === userId.toString()
-    );
+    // Check if already enrolled (handle both old format ObjectId and new format with studentId)
+    const isEnrolled = course.students.some(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() === userId.toString();
+      }
+      // Handle legacy format (direct ObjectId)
+      return student.toString() === userId.toString();
+    });
 
     if (isEnrolled) {
       return res.status(400).json({
@@ -77,17 +81,25 @@ export const createCheckoutSession = async (req, res) => {
     }
 
     // Calculate amount (in cents for Stripe)
-    const amount = course.price || 0;
+    const amount = parseFloat(course.price) || 0;
 
     // Check if amount is valid
-    if (amount <= 0) {
+    if (!amount || amount <= 0 || isNaN(amount)) {
       return res.status(400).json({
         success: false,
-        message: 'Course price must be greater than 0. Please contact support.'
+        message: `Course price is invalid (${course.price}). Course price must be greater than 0. Please contact support.`
       });
     }
 
     const amountInCents = Math.round(amount * 100);
+    
+    // Validate amount in cents is valid
+    if (amountInCents <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid course price: ${amount}. Please contact support.`
+      });
+    }
 
     // Validate Stripe initialization
     let stripeInstance;
@@ -147,7 +159,7 @@ export const createCheckoutSession = async (req, res) => {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: course.title,
+              name: course.title || 'Course Enrollment',
               description: (course.description || course.subtitle || 'Course enrollment').substring(0, 200),
               images: thumbnailImages, // Only include valid URLs
             },
@@ -161,10 +173,10 @@ export const createCheckoutSession = async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/cancel?course_id=${courseId}`,
       customer_email: user.email,
       metadata: {
-        studentId: userId,
-        courseId: courseId,
-        studentName: user.fullName,
-        courseTitle: course.title,
+        studentId: userId.toString(),
+        courseId: courseId.toString(),
+        studentName: user.fullName || 'Student',
+        courseTitle: course.title || 'Course',
       },
       client_reference_id: `${userId}_${courseId}`,
     });
@@ -206,12 +218,10 @@ export const createCheckoutSession = async (req, res) => {
       sessionId: session.id
     });
   } catch (error) {
-    console.error('Create checkout session error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      type: error.type,
-      stack: error.stack
-    });
+    // Log error for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Create checkout session error:', error.message);
+    }
 
     if (error.type === 'StripeCardError' || error.type === 'StripeInvalidRequestError') {
       return res.status(400).json({
@@ -223,18 +233,16 @@ export const createCheckoutSession = async (req, res) => {
     if (error.message && error.message.includes('apiKey')) {
       return res.status(500).json({
         success: false,
-        message: 'Payment service not configured. Please contact support.'
+        message: 'Payment service is not configured. Please add STRIPE_SECRET_KEY to your backend/.env file.'
       });
     }
 
-    const errorMessage = process.env.NODE_ENV === 'development'
-      ? error.message || 'Failed to create checkout session.'
-      : 'Failed to create checkout session. Please try again later.';
+    // Return user-friendly error message
+    const errorMessage = error.message || 'Failed to create checkout session. Please try again.';
 
     res.status(500).json({
       success: false,
-      message: errorMessage,
-      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+      message: errorMessage
     });
   }
 };
@@ -309,7 +317,7 @@ export const verifyPaymentAndEnroll = async (req, res) => {
     payment.paymentIntentId = session.payment_intent;
     await payment.save();
 
-    // Enroll student in course
+    // Enroll student in course with ID and name
     const course = await Course.findById(payment.course);
     if (course) {
       // Check if already enrolled (handle both old and new format)
@@ -363,7 +371,11 @@ export const handleStripeWebhook = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET || ''
     );
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
+    if (err.message && err.message.includes('STRIPE_SECRET_KEY')) {
+      return res.status(500).json({ 
+        error: 'Payment service is not configured. Please add STRIPE_SECRET_KEY to your backend/.env file.' 
+      });
+    }
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -381,15 +393,25 @@ export const handleStripeWebhook = async (req, res) => {
         payment.paymentIntentId = session.payment_intent;
         await payment.save();
 
-        // Enroll student in course
+        // Enroll student in course with ID and name
         const course = await Course.findById(payment.course);
-        if (course) {
-          const isEnrolled = course.students.some(
-            studentId => studentId.toString() === payment.student.toString()
-          );
+        const studentUser = await User.findById(payment.student);
+        
+        if (course && studentUser) {
+          // Check if already enrolled (handle both old format ObjectId and new format with studentId)
+          const isEnrolled = course.students.some(student => {
+            if (typeof student === 'object' && student.studentId) {
+              return student.studentId.toString() === payment.student.toString();
+            }
+            // Handle legacy format (direct ObjectId)
+            return student.toString() === payment.student.toString();
+          });
 
           if (!isEnrolled) {
-            course.students.push(payment.student);
+            course.students.push({
+              studentId: payment.student,
+              studentName: studentUser.fullName || 'Student'
+            });
             await course.save();
           }
         }

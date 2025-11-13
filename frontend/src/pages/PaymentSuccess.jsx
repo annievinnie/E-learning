@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
 import API from '../api';
+import { CheckCircle } from 'lucide-react';
 
 const PaymentSuccess = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get('session_id');
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [verifying, setVerifying] = useState(true);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
     const verifyPayment = async () => {
       if (!sessionId) {
-        setLoading(false);
+        setError('No session ID provided');
+        setVerifying(false);
         return;
       }
 
@@ -29,23 +31,24 @@ const PaymentSuccess = () => {
       } catch (error) {
         console.error('Payment verification error:', error);
       } finally {
-        setLoading(false);
+        setVerifying(false);
       }
     };
 
     verifyPayment();
-  }, [sessionId]);
+  }, [sessionId, navigate]);
 
   return (
     <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
       <div className="text-center">
-        {loading ? (
-          <div>
-            <div className="spinner-border text-primary mb-3" role="status">
+        {verifying ? (
+          <>
+            <div className="spinner-border text-primary mb-4" role="status" style={{ width: '64px', height: '64px' }}>
               <span className="visually-hidden">Loading...</span>
             </div>
-            <p>Verifying payment...</p>
-          </div>
+            <h2>Verifying Payment...</h2>
+            <p className="text-muted">Please wait while we confirm your payment.</p>
+          </>
         ) : success ? (
           <>
             <CheckCircle size={64} className="text-success mb-3" />
@@ -55,15 +58,16 @@ const PaymentSuccess = () => {
               className="btn btn-primary"
               onClick={() => navigate('/my-courses')}
             >
-              Go to My Courses
+              Go to Dashboard
             </button>
           </>
         ) : (
           <>
-            <h2 className="mb-3">Payment Verification Failed</h2>
-            <p className="mb-4">There was an issue verifying your payment. Please contact support if you were charged.</p>
-            <button
-              className="btn btn-primary"
+            <div className="text-danger mb-4" style={{ fontSize: '64px' }}>✗</div>
+            <h2 className="text-danger">Payment Verification Failed</h2>
+            <p className="text-muted">{error || 'There was an issue verifying your payment.'}</p>
+            <button 
+              className="btn btn-primary mt-3"
               onClick={() => navigate('/StudentDashboard')}
             >
               Go to Dashboard
@@ -76,4 +80,3 @@ const PaymentSuccess = () => {
 };
 
 export default PaymentSuccess;
-
