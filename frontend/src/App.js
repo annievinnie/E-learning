@@ -14,10 +14,15 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import TeacherApplicationForm from "./components/teacher/TeacherApplicationForm";
 import StudentMyCourses from "./components/student/StudentMyCourses";
+import useInactivityLogout from "./hooks/useInactivityLogout";
 
-function App() {
+// Inner component to use the hook inside Router context
+function AppContent() {
+  // Enable automatic logout after 15 minutes of inactivity
+  useInactivityLogout(15 * 60 * 1000); // 15 minutes in milliseconds
+
   return (
-    <BrowserRouter>
+    <>
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -35,6 +40,14 @@ function App() {
         <Route path="/teacher-application" element={<TeacherApplicationForm />} />
         <Route path="/my-courses" element={<StudentMyCourses />} />
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }
