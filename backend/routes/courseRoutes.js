@@ -38,8 +38,8 @@ router.post('/', verifyToken, verifyTeacher, uploadImage, createCourse);
 router.put('/:courseId', verifyToken, verifyTeacher, uploadImage, updateCourse);
 router.delete('/:courseId', verifyToken, verifyTeacher, deleteCourse);
 
-// Module routes
-router.post('/:courseId/modules', verifyToken, verifyTeacher, addModuleToCourse);
+// Module routes (with video upload support)
+router.post('/:courseId/modules', verifyToken, verifyTeacher, uploadVideo, addModuleToCourse);
 router.put('/:courseId/modules/:moduleId', verifyToken, verifyTeacher, updateModule);
 router.delete('/:courseId/modules/:moduleId', verifyToken, verifyTeacher, deleteModule);
 

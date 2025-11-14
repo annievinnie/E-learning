@@ -5,34 +5,41 @@ import {
   Star,
   Users,
   Clock,
-  BookOpen,
   Shield,
-  CheckCircle,
   Download,
-  Lock,
+  CheckCircle,
   FileText,
-  HelpCircle,
-  ChevronDown,
-  Award,
 } from "lucide-react";
 import API from "../api";
 import Footer from "../components/Footer";
 import StudentBecomeInstructor from "../components/student/StudentBecomeInstructor";
+import CourseOverview from "../components/student/CourseOverview";
+import CourseCurriculum from "../components/student/CourseCurriculum";
+import CourseAssignments from "../components/student/CourseAssignments";
+import CourseQnA from "../components/student/CourseQnA";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const [expandedModules, setExpandedModules] = useState([0]);
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [downloadableFilesCount, setDownloadableFilesCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchCourseDetails();
   }, [id]);
+
+  // Fetch assignments to count downloadable files
+  useEffect(() => {
+    if (id) {
+      fetchAssignmentsCount();
+    }
+  }, [id]);
+
 
   // Refresh enrollment status when component becomes visible (e.g., returning from payment)
   useEffect(() => {
@@ -99,6 +106,23 @@ const CourseDetailPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAssignmentsCount = async () => {
+    try {
+      const response = await API.get(`/student/courses/${id}/assignments`);
+      if (response.data.success) {
+        const assignments = response.data.assignments || [];
+        // Count total downloadable files from all assignments
+        const totalFiles = assignments.reduce((count, assignment) => {
+          return count + (assignment.attachments?.length || 0);
+        }, 0);
+        setDownloadableFilesCount(totalFiles);
+      }
+    } catch (error) {
+      console.error('Error fetching assignments count:', error);
+      setDownloadableFilesCount(0);
     }
   };
 
@@ -180,11 +204,6 @@ const CourseDetailPage = () => {
     }
   };
 
-  const toggleModule = (id) => {
-    setExpandedModules((prev) =>
-      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
-    );
-  };
 
   if (loading) {
     return (
@@ -217,10 +236,14 @@ const CourseDetailPage = () => {
     ? Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)
     : course.discount || 0;
 
+  // Calculate real data
+  const modulesCount = course.modules?.length || 0;
+  const videosCount = course.modules?.reduce((total, module) => total + (module.video ? 1 : 0), 0) || 0;
+
   const courseIncludes = [
     { icon: Play, text: `${course.duration || '42.5'} hours on-demand video` },
-    { icon: FileText, text: "248 lectures • 32 articles" },
-    { icon: Download, text: "75 downloadable resources" },
+    { icon: FileText, text: `${modulesCount} module${modulesCount !== 1 ? 's' : ''} • ${videosCount} video${videosCount !== 1 ? 's' : ''}` },
+    { icon: Download, text: `${downloadableFilesCount} downloadable resource${downloadableFilesCount !== 1 ? 's' : ''}` },
     { icon: Shield, text: "Full lifetime access" },
     { icon: CheckCircle, text: "Certificate of completion" },
   ];
@@ -267,18 +290,6 @@ const CourseDetailPage = () => {
                     }}
                   />
                 ) : null}
-                {/* <div
-                  className="instructor-fallback rounded-circle me-3 border border-white d-flex align-items-center justify-content-center text-white fw-bold"
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    backgroundColor: '#667eea',
-                    fontSize: '1.5rem',
-                    display: course.instructorImage ? 'none' : 'flex'
-                  }}
-                >
-                  {(course.instructor || 'U').charAt(0).toUpperCase()}
-                </div> */}
                 <div>
                   <h5 className="mb-0">{course.instructor || "Instructor"}</h5>
                   <small>{course.instructorEmail || "Course Instructor"}</small>
@@ -320,10 +331,6 @@ const CourseDetailPage = () => {
                       {enrolling ? 'Processing...' : 'Enroll Now'}
                     </button>
                   )}
-                  <button className="btn btn-outline-secondary w-100 mb-3">
-                    Try Free Preview
-                  </button>
-
                   <h6 className="fw-semibold">This course includes:</h6>
                   <ul className="list-unstyled mt-2">
                     {courseIncludes.map((item, idx) => {
@@ -346,7 +353,7 @@ const CourseDetailPage = () => {
       {/* Tabs Section */}
       <div className="container py-5">
         <ul className="nav nav-tabs mb-4">
-          {["overview", "curriculum", "instructor", "reviews"].map((tab) => (
+          {["overview", "curriculum", "assignment", "qna"].map((tab) => (
             <li className="nav-item" key={tab}>
               <button
                 className={`nav-link text-capitalize ${
@@ -354,77 +361,17 @@ const CourseDetailPage = () => {
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab}
+                {tab === "qna" ? "Q & A" : tab}
               </button>
             </li>
           ))}
         </ul>
 
         <div>
-          {activeTab === "overview" && (
-            <div>
-              <h3>What you’ll learn</h3>
-              <ul className="list-group list-group-flush my-3">
-                <li className="list-group-item">Build responsive websites with HTML, CSS, JS</li>
-                <li className="list-group-item">Master React, Node.js, and MongoDB</li>
-                <li className="list-group-item">Deploy full-stack apps professionally</li>
-              </ul>
-              <h4 className="mt-5">Requirements</h4>
-              <p>No prior programming experience required.</p>
-            </div>
-          )}
-
-          {activeTab === "instructor" && (
-            <div className="card border-0 shadow-sm p-4">
-              <div className="d-flex align-items-center mb-3">
-                {course.instructorImage ? (
-                  <img
-                    src={course.instructorImage}
-                    alt={course.instructor || "Instructor"}
-                    className="rounded-circle me-3"
-                    width="64"
-                    height="64"
-                    style={{ objectFit: 'cover', backgroundColor: '#ffffff' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const fallback = e.target.parentElement.querySelector('.instructor-fallback');
-                      if (fallback) {
-                        fallback.style.display = 'flex';
-                      }
-                    }}
-                  />
-                ) : null}
-                <div
-                  className="instructor-fallback rounded-circle me-3 d-flex align-items-center justify-content-center text-white fw-bold"
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    backgroundColor: '#667eea',
-                    fontSize: '1.5rem',
-                    display: course.instructorImage ? 'none' : 'flex'
-                  }}
-                >
-                  {(course.instructor || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h5 className="mb-0">{course.instructor || "Instructor"}</h5>
-                  <p className="text-muted mb-0">{course.instructorEmail || "Course Instructor"}</p>
-                </div>
-              </div>
-              <p>
-                Experienced instructor passionate about teaching and sharing knowledge.
-              </p>
-            </div>
-          )}
-
-          {activeTab === "reviews" && (
-            <div>
-              <h4>Student Reviews</h4>
-              <p className="text-muted">
-                ⭐ {course.rating || '4.9'} out of 5 — based on {course.reviews?.toLocaleString() || '12,453'} reviews
-              </p>
-            </div>
-          )}
+          {activeTab === "overview" && <CourseOverview course={course} />}
+          {activeTab === "curriculum" && <CourseCurriculum course={course} isEnrolled={isEnrolled} />}
+          {activeTab === "assignment" && <CourseAssignments courseId={id} isEnrolled={isEnrolled} />}
+          {activeTab === "qna" && <CourseQnA course={course} isEnrolled={isEnrolled} />}
         </div>
       </div>
 

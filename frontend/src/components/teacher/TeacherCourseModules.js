@@ -4,33 +4,75 @@ const TeacherCourseModules = ({
   selectedCourse,
   onBackToCourses,
   onAddModule,
-  onDeleteModule,
-  onAddVideo,
-  onDeleteVideo
+  onDeleteModule
 }) => {
   const [showAddModuleForm, setShowAddModuleForm] = useState(false);
-  const [showAddVideoForm, setShowAddVideoForm] = useState(false);
-  const [selectedModule, setSelectedModule] = useState(null);
-  const [moduleFormData, setModuleFormData] = useState({ title: '', description: '', order: 1 });
+  const [moduleFormData, setModuleFormData] = useState({ title: '', description: '', videoFile: null, duration: '' });
   const [moduleFormErrors, setModuleFormErrors] = useState({});
   const [isSubmittingModule, setIsSubmittingModule] = useState(false);
-  const [videoFormData, setVideoFormData] = useState({ title: '', description: '', videoFile: null, duration: '', order: 1 });
-  const [videoFormErrors, setVideoFormErrors] = useState({});
-  const [isSubmittingVideo, setIsSubmittingVideo] = useState(false);
+  const [isCalculatingDuration, setIsCalculatingDuration] = useState(false);
 
-  const handleModuleFormChange = (e) => {
-    const { name, value } = e.target;
-    setModuleFormData(prev => ({ ...prev, [name]: value }));
-    if (moduleFormErrors[name]) {
-      setModuleFormErrors(prev => ({ ...prev, [name]: '' }));
-    }
+  // Function to calculate video duration
+  const calculateVideoDuration = (file) => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        const duration = video.duration; // Duration in seconds
+        const hours = Math.floor(duration / 3600);
+        const minutes = Math.floor((duration % 3600) / 60);
+        const seconds = Math.floor(duration % 60);
+        
+        // Format as HH:MM:SS or MM:SS
+        let formattedDuration;
+        if (hours > 0) {
+          formattedDuration = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+          formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        resolve(formattedDuration);
+      };
+
+      video.onerror = () => {
+        window.URL.revokeObjectURL(video.src);
+        reject(new Error('Failed to load video metadata'));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
   };
 
-  const handleVideoFormChange = (e) => {
+  const handleModuleFormChange = async (e) => {
     const { name, value, files } = e.target;
-    setVideoFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
-    if (videoFormErrors[name]) {
-      setVideoFormErrors(prev => ({ ...prev, [name]: '' }));
+    
+    if (files && files[0] && name === 'videoFile') {
+      // When video file is selected, calculate duration
+      setIsCalculatingDuration(true);
+      try {
+        const duration = await calculateVideoDuration(files[0]);
+        setModuleFormData(prev => ({ 
+          ...prev, 
+          [name]: files[0],
+          duration: duration
+        }));
+      } catch (error) {
+        console.error('Error calculating video duration:', error);
+        setModuleFormData(prev => ({ 
+          ...prev, 
+          [name]: files[0],
+          duration: '0:00'
+        }));
+      } finally {
+        setIsCalculatingDuration(false);
+      }
+    } else {
+      setModuleFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
+    }
+    
+    if (moduleFormErrors[name]) {
+      setModuleFormErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
@@ -38,15 +80,7 @@ const TeacherCourseModules = ({
     const errors = {};
     if (!moduleFormData.title.trim()) errors.title = 'Module title is required';
     if (!moduleFormData.description.trim()) errors.description = 'Module description is required';
-    return errors;
-  };
-
-  const validateVideoForm = () => {
-    const errors = {};
-    if (!videoFormData.title.trim()) errors.title = 'Video title is required';
-    if (!videoFormData.description.trim()) errors.description = 'Video description is required';
-    if (!videoFormData.videoFile) errors.videoFile = 'Video file is required';
-    if (!videoFormData.duration.trim()) errors.duration = 'Video duration is required';
+    if (!moduleFormData.videoFile) errors.videoFile = 'Video file is required';
     return errors;
   };
 
@@ -64,7 +98,7 @@ const TeacherCourseModules = ({
         ...moduleFormData,
         order: selectedCourse?.modules ? selectedCourse.modules.length + 1 : 1
       });
-      setModuleFormData({ title: '', description: '', order: 1 });
+      setModuleFormData({ title: '', description: '', videoFile: null, duration: '' });
       setModuleFormErrors({});
       setShowAddModuleForm(false);
     } catch (error) {
@@ -72,41 +106,6 @@ const TeacherCourseModules = ({
     } finally {
       setIsSubmittingModule(false);
     }
-  };
-
-  const handleAddVideoSubmit = async (e) => {
-    e.preventDefault();
-    const errors = validateVideoForm();
-    if (Object.keys(errors).length > 0) {
-      setVideoFormErrors(errors);
-      return;
-    }
-    
-    setIsSubmittingVideo(true);
-    try {
-      await onAddVideo(selectedModule, videoFormData);
-      setVideoFormData({ title: '', description: '', videoFile: null, duration: '', order: 1 });
-      setVideoFormErrors({});
-      setShowAddVideoForm(false);
-      setSelectedModule(null);
-    } catch (error) {
-      console.error('Error uploading video:', error);
-    } finally {
-      setIsSubmittingVideo(false);
-    }
-  };
-
-  const handleAddVideoToModule = (module) => {
-    setSelectedModule(module);
-    setVideoFormData({
-      title: '',
-      description: '',
-      videoFile: null,
-      duration: '',
-      order: module.videos ? module.videos.length + 1 : 1
-    });
-    setVideoFormErrors({});
-    setShowAddVideoForm(true);
   };
 
   if (!selectedCourse) {
@@ -236,31 +235,73 @@ const TeacherCourseModules = ({
               )}
             </div>
 
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                Video File *
+              </label>
+              <input
+                type="file"
+                name="videoFile"
+                accept="video/*"
+                onChange={handleModuleFormChange}
+                disabled={isCalculatingDuration}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: `1px solid ${moduleFormErrors.videoFile ? '#f44336' : '#ccc'}`,
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box',
+                  opacity: isCalculatingDuration ? 0.6 : 1
+                }}
+              />
+              {isCalculatingDuration && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#2196f3' }}>
+                  Calculating video duration...
+                </div>
+              )}
+              {moduleFormErrors.videoFile && (
+                <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {moduleFormErrors.videoFile}
+                </span>
+              )}
+              {moduleFormData.videoFile && !isCalculatingDuration && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                  Selected: {moduleFormData.videoFile.name} ({(moduleFormData.videoFile.size / (1024 * 1024)).toFixed(2)} MB)
+                  {moduleFormData.duration && (
+                    <span style={{ marginLeft: '1rem', color: '#2e7d32', fontWeight: '500' }}>
+                      Duration: {moduleFormData.duration}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button
                 type="submit"
-                disabled={isSubmittingModule}
+                disabled={isSubmittingModule || isCalculatingDuration}
                 style={{
                   backgroundColor: '#4caf50',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
                   borderRadius: '4px',
-                  cursor: isSubmittingModule ? 'not-allowed' : 'pointer',
+                  cursor: (isSubmittingModule || isCalculatingDuration) ? 'not-allowed' : 'pointer',
                   fontSize: '1rem',
                   fontWeight: '500',
-                  opacity: isSubmittingModule ? 0.7 : 1,
+                  opacity: (isSubmittingModule || isCalculatingDuration) ? 0.7 : 1,
                   transition: 'all 0.3s ease'
                 }}
               >
-                {isSubmittingModule ? 'Creating...' : 'Create Module'}
+                {isSubmittingModule ? 'Creating...' : isCalculatingDuration ? 'Calculating...' : 'Create Module'}
               </button>
               
               <button
                 type="button"
                 onClick={() => {
                   setShowAddModuleForm(false);
-                  setModuleFormData({ title: '', description: '', order: 1 });
+                  setModuleFormData({ title: '', description: '', videoFile: null, duration: '' });
                   setModuleFormErrors({});
                 }}
                 disabled={isSubmittingModule}
@@ -280,188 +321,6 @@ const TeacherCourseModules = ({
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* Add Video Form Modal */}
-      {showAddVideoForm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <h3 style={{ color: '#2e7d32', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
-              Add Video to "{selectedModule?.title}"
-            </h3>
-            
-            <form onSubmit={handleAddVideoSubmit}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  Video Title *
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={videoFormData.title}
-                  onChange={handleVideoFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `1px solid ${videoFormErrors.title ? '#f44336' : '#ccc'}`,
-                    borderRadius: '4px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
-                  placeholder="Enter video title"
-                />
-                {videoFormErrors.title && (
-                  <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                    {videoFormErrors.title}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  Description *
-                </label>
-                <textarea
-                  name="description"
-                  value={videoFormData.description}
-                  onChange={handleVideoFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `1px solid ${videoFormErrors.description ? '#f44336' : '#ccc'}`,
-                    borderRadius: '4px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box',
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                  placeholder="Enter video description"
-                />
-                {videoFormErrors.description && (
-                  <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                    {videoFormErrors.description}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                    Video File *
-                  </label>
-                  <input
-                    type="file"
-                    name="videoFile"
-                    accept="video/*"
-                    onChange={handleVideoFormChange}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: `1px solid ${videoFormErrors.videoFile ? '#f44336' : '#ccc'}`,
-                      borderRadius: '4px',
-                      fontSize: '1rem',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  {videoFormErrors.videoFile && (
-                    <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                      {videoFormErrors.videoFile}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                    Duration *
-                  </label>
-                  <input
-                    type="text"
-                    name="duration"
-                    value={videoFormData.duration}
-                    onChange={handleVideoFormChange}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: `1px solid ${videoFormErrors.duration ? '#f44336' : '#ccc'}`,
-                      borderRadius: '4px',
-                      fontSize: '1rem',
-                      boxSizing: 'border-box'
-                    }}
-                    placeholder="e.g., 15:30"
-                  />
-                  {videoFormErrors.duration && (
-                    <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                      {videoFormErrors.duration}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button
-                  type="submit"
-                  disabled={isSubmittingVideo}
-                  style={{
-                    backgroundColor: '#2196f3',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '4px',
-                    cursor: isSubmittingVideo ? 'not-allowed' : 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: '500',
-                    opacity: isSubmittingVideo ? 0.7 : 1,
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {isSubmittingVideo ? 'Uploading...' : 'Upload Video'}
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddVideoForm(false);
-                    setSelectedModule(null);
-                  }}
-                  disabled={isSubmittingVideo}
-                  style={{
-                    backgroundColor: '#f5f5f5',
-                    color: '#666',
-                    border: '1px solid #ccc',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '4px',
-                    cursor: isSubmittingVideo ? 'not-allowed' : 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: '500',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 
@@ -499,101 +358,52 @@ const TeacherCourseModules = ({
                       {module.description}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => handleAddVideoToModule(module)}
-                      style={{
-                        backgroundColor: '#2196f3',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      + Add Video
-                    </button>
-                    <button
-                      onClick={() => onDeleteModule(module.id || module._id)}
-                      style={{
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      Delete Module
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => onDeleteModule(module.id || module._id)}
+                    style={{
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    Delete Module
+                  </button>
                 </div>
 
-                {/* Videos in Module */}
-                {module.videos && module.videos.length > 0 ? (
-                  <div style={{ marginTop: '1rem' }}>
-                    <h5 style={{ color: '#666', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                      Videos ({module.videos.length})
-                    </h5>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {module.videos.map((video) => (
-                        <div key={video.id || video._id} style={{
-                          padding: '0.75rem',
-                          backgroundColor: 'white',
-                          borderRadius: '4px',
-                          border: '1px solid #e0e0e0',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{
-                              width: '40px',
-                              height: '40px',
-                              backgroundColor: '#f44336',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: '0.8rem'
-                            }}>
-                              ▶
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>
-                                {video.order}. {video.title}
-                              </div>
-                              <div style={{ color: '#666', fontSize: '0.8rem' }}>
-                                {video.description} • Duration: {video.duration}
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              onDeleteVideo(video.id || video._id, module);
-                            }}
-                            style={{
-                              backgroundColor: '#f44336',
-                              color: 'white',
-                              border: 'none',
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            Delete
-                          </button>
+                {/* Video in Module */}
+                {module.video ? (
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e0e0e0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: '#f44336',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '0.8rem'
+                      }}>
+                        ▶
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>
+                          {module.video.title}
                         </div>
-                      ))}
+                        <div style={{ color: '#666', fontSize: '0.8rem' }}>
+                          {module.video.description} {module.video.duration && `• Duration: ${module.video.duration}`}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
                   <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px', textAlign: 'center', color: '#666' }}>
-                    No videos in this module yet. Click "Add Video" to get started.
+                    No video in this module.
                   </div>
                 )}
               </div>
