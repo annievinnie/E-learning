@@ -49,6 +49,14 @@ const CoursesListPage = () => {
         navigate(`/course/${courseId}`);
     };
 
+    const handleResetFilters = () => {
+        setSelectedCategory("all");
+        setSelectedLevel("all");
+        setSelectedPrice("all");
+        setSelectedEnrollment("all");
+        setSearchQuery("");
+    };
+
     // Get unique categories from courses dynamically
     const allCategories = ["all", ...new Set(courses.map(course => course.category || 'Other').filter(Boolean))];
     const levels = ["all", "Beginner", "Intermediate", "Advanced"];
@@ -127,6 +135,7 @@ const CoursesListPage = () => {
                     onLevelChange={setSelectedLevel}
                     onPriceChange={setSelectedPrice}
                     onEnrollmentChange={setSelectedEnrollment}
+                    onResetFilters={handleResetFilters}
                 />
 
                 <StudentCoursesList
