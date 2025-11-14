@@ -14,9 +14,8 @@ const TeacherAssignments = ({
   const [assignmentFormData, setAssignmentFormData] = useState({
     title: '',
     description: '',
-    dueDate: '',
     courseId: '',
-    maxPoints: 100
+    assignmentFile: null
   });
   const [assignmentFormErrors, setAssignmentFormErrors] = useState({});
   const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
@@ -24,9 +23,8 @@ const TeacherAssignments = ({
   const [editAssignmentFormData, setEditAssignmentFormData] = useState({
     title: '',
     description: '',
-    dueDate: '',
     courseId: '',
-    maxPoints: 100
+    assignmentFile: null
   });
   const [editAssignmentFormErrors, setEditAssignmentFormErrors] = useState({});
   const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
@@ -36,9 +34,8 @@ const TeacherAssignments = ({
       setEditAssignmentFormData({
         title: editingAssignment.title,
         description: editingAssignment.description,
-        dueDate: editingAssignment.dueDate.split('T')[0],
         courseId: editingAssignment.course._id,
-        maxPoints: editingAssignment.maxPoints
+        assignmentFile: null
       });
       setEditAssignmentFormErrors({});
       setShowEditAssignmentForm(true);
@@ -47,16 +44,16 @@ const TeacherAssignments = ({
   }, [editingAssignment]);
 
   const handleAssignmentFormChange = (e) => {
-    const { name, value } = e.target;
-    setAssignmentFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, files } = e.target;
+    setAssignmentFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
     if (assignmentFormErrors[name]) {
       setAssignmentFormErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const handleEditAssignmentFormChange = (e) => {
-    const { name, value } = e.target;
-    setEditAssignmentFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, files } = e.target;
+    setEditAssignmentFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
     if (editAssignmentFormErrors[name]) {
       setEditAssignmentFormErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -66,7 +63,6 @@ const TeacherAssignments = ({
     const errors = {};
     if (!assignmentFormData.title.trim()) errors.title = 'Assignment title is required';
     if (!assignmentFormData.description.trim()) errors.description = 'Assignment description is required';
-    if (!assignmentFormData.dueDate.trim()) errors.dueDate = 'Due date is required';
     if (!assignmentFormData.courseId.trim()) errors.courseId = 'Course selection is required';
     return errors;
   };
@@ -75,7 +71,6 @@ const TeacherAssignments = ({
     const errors = {};
     if (!editAssignmentFormData.title.trim()) errors.title = 'Assignment title is required';
     if (!editAssignmentFormData.description.trim()) errors.description = 'Assignment description is required';
-    if (!editAssignmentFormData.dueDate.trim()) errors.dueDate = 'Due date is required';
     if (!editAssignmentFormData.courseId.trim()) errors.courseId = 'Course selection is required';
     return errors;
   };
@@ -91,7 +86,7 @@ const TeacherAssignments = ({
     setIsSubmittingAssignment(true);
     try {
       await onCreateAssignment(assignmentFormData);
-      setAssignmentFormData({ title: '', description: '', dueDate: '', courseId: '', maxPoints: 100 });
+      setAssignmentFormData({ title: '', description: '', courseId: '', assignmentFile: null });
       setAssignmentFormErrors({});
       setShowAddAssignmentForm(false);
     } catch (error) {
@@ -112,7 +107,7 @@ const TeacherAssignments = ({
     setIsUpdatingAssignment(true);
     try {
       await onUpdateAssignment(editingAssignment._id, editAssignmentFormData);
-      setEditAssignmentFormData({ title: '', description: '', dueDate: '', courseId: '', maxPoints: 100 });
+      setEditAssignmentFormData({ title: '', description: '', courseId: '', assignmentFile: null });
       setEditAssignmentFormErrors({});
       setShowEditAssignmentForm(false);
     } catch (error) {
@@ -240,31 +235,6 @@ const TeacherAssignments = ({
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  Due Date *
-                </label>
-                <input
-                  type="date"
-                  name="dueDate"
-                  value={assignmentFormData.dueDate}
-                  onChange={handleAssignmentFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `1px solid ${assignmentFormErrors.dueDate ? '#f44336' : '#ccc'}`,
-                    borderRadius: '4px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                {assignmentFormErrors.dueDate && (
-                  <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                    {assignmentFormErrors.dueDate}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                   Course *
                 </label>
                 <select
@@ -291,28 +261,31 @@ const TeacherAssignments = ({
                   </span>
                 )}
               </div>
+            </div>
 
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  Max Points
-                </label>
-                <input
-                  type="number"
-                  name="maxPoints"
-                  value={assignmentFormData.maxPoints}
-                  onChange={handleAssignmentFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
-                  min="1"
-                  max="1000"
-                />
-              </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                Assignment File (PDF, ZIP, DOC) - Max 50MB
+              </label>
+              <input
+                type="file"
+                name="assignmentFile"
+                accept=".pdf,.zip,.doc,.docx"
+                onChange={handleAssignmentFormChange}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {assignmentFormData.assignmentFile && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                  Selected: {assignmentFormData.assignmentFile.name} ({(assignmentFormData.assignmentFile.size / (1024 * 1024)).toFixed(2)} MB)
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
@@ -339,7 +312,7 @@ const TeacherAssignments = ({
                 type="button"
                 onClick={() => {
                   setShowAddAssignmentForm(false);
-                  setAssignmentFormData({ title: '', description: '', dueDate: '', courseId: '', maxPoints: 100 });
+                  setAssignmentFormData({ title: '', description: '', courseId: '', assignmentFile: null });
                   setAssignmentFormErrors({});
                 }}
                 disabled={isSubmittingAssignment}
@@ -433,31 +406,6 @@ const TeacherAssignments = ({
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  Due Date *
-                </label>
-                <input
-                  type="date"
-                  name="dueDate"
-                  value={editAssignmentFormData.dueDate}
-                  onChange={handleEditAssignmentFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `1px solid ${editAssignmentFormErrors.dueDate ? '#f44336' : '#ccc'}`,
-                    borderRadius: '4px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                {editAssignmentFormErrors.dueDate && (
-                  <span style={{ color: '#f44336', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                    {editAssignmentFormErrors.dueDate}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                   Course *
                 </label>
                 <select
@@ -484,28 +432,36 @@ const TeacherAssignments = ({
                   </span>
                 )}
               </div>
+            </div>
 
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  Max Points
-                </label>
-                <input
-                  type="number"
-                  name="maxPoints"
-                  value={editAssignmentFormData.maxPoints}
-                  onChange={handleEditAssignmentFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
-                  min="1"
-                  max="1000"
-                />
-              </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                Assignment File (PDF, ZIP, DOC) - Max 50MB
+              </label>
+              <input
+                type="file"
+                name="assignmentFile"
+                accept=".pdf,.zip,.doc,.docx"
+                onChange={handleEditAssignmentFormChange}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {editAssignmentFormData.assignmentFile && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                  Selected: {editAssignmentFormData.assignmentFile.name} ({(editAssignmentFormData.assignmentFile.size / (1024 * 1024)).toFixed(2)} MB)
+                </div>
+              )}
+              {editingAssignment?.attachments && editingAssignment.attachments.length > 0 && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                  Current file: {editingAssignment.attachments[0].fileName} (Upload new file to replace)
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
@@ -532,7 +488,7 @@ const TeacherAssignments = ({
                 type="button"
                 onClick={() => {
                   setShowEditAssignmentForm(false);
-                  setEditAssignmentFormData({ title: '', description: '', dueDate: '', courseId: '', maxPoints: 100 });
+                  setEditAssignmentFormData({ title: '', description: '', courseId: '', assignmentFile: null });
                   setEditAssignmentFormErrors({});
                 }}
                 disabled={isUpdatingAssignment}
@@ -581,9 +537,7 @@ const TeacherAssignments = ({
                 <tr style={{ backgroundColor: '#f5f5f5' }}>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Title</th>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Course</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Due Date</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Points</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Submissions</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>File</th>
                   <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Actions</th>
                 </tr>
               </thead>
@@ -602,15 +556,15 @@ const TeacherAssignments = ({
                       </div>
                     </td>
                     <td style={{ padding: '1rem' }}>
-                      <div style={{ color: '#666', fontSize: '0.9rem' }}>
-                        {new Date(assignment.dueDate).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ color: '#666' }}>{assignment.maxPoints}</div>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ color: '#666' }}>{assignment.submissions?.length || 0}</div>
+                      {assignment.attachments && assignment.attachments.length > 0 ? (
+                        <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                          {assignment.attachments[0].fileName}
+                        </div>
+                      ) : (
+                        <div style={{ color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                          No file attached
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>

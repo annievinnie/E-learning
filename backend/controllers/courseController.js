@@ -235,18 +235,35 @@ export const deleteCourse = async (req, res) => {
   }
 };
 
-// Add a module to a course
+// Add a module to a course (with video upload)
 export const addModuleToCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, order } = req.body;
+    const { title, description, order, duration } = req.body;
     const teacherId = req.user.userId || req.user.id;
+    const videoFile = req.file;
 
     // Validation
     if (!title || !description) {
+      // Clean up uploaded file if validation fails
+      if (videoFile && videoFile.path) {
+        try {
+          fs.unlinkSync(videoFile.path);
+        } catch (deleteError) {
+          console.error('Error deleting video file:', deleteError);
+        }
+      }
       return res.status(400).json({
         success: false,
         message: 'Module title and description are required.'
+      });
+    }
+
+    // Video file is required
+    if (!videoFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Video file is required for module creation.'
       });
     }
 
@@ -256,29 +273,70 @@ export const addModuleToCourse = async (req, res) => {
     });
 
     if (!course) {
+      // Clean up uploaded file if course not found
+      if (videoFile && videoFile.path) {
+        try {
+          fs.unlinkSync(videoFile.path);
+        } catch (deleteError) {
+          console.error('Error deleting video file:', deleteError);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Course not found or you do not have permission to modify it.'
       });
     }
 
+    // Build video data
+    const videoData = {
+      title: title, // Use module title as video title
+      description: description, // Use module description as video description
+      videoPath: `/uploads/videos/${videoFile.filename}`,
+      videoUrl: '',
+      duration: duration || '0:00',
+      order: 1,
+      uploadedAt: new Date()
+    };
+
+    // Calculate the correct order number
+    // Sort existing modules by order and get the highest order number
+    const sortedModules = [...course.modules].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const nextOrder = sortedModules.length > 0 
+      ? Math.max(...sortedModules.map(m => m.order || 0)) + 1 
+      : 1;
+
     const newModule = {
       title,
       description,
-      order: order || course.modules.length + 1,
-      videos: []
+      order: order || nextOrder,
+      video: videoData
     };
 
     course.modules.push(newModule);
     await course.save();
 
+    // Populate the course before returning
+    const populatedCourse = await Course.findById(course._id)
+      .populate('teacher', 'fullName email')
+      .populate('students', 'fullName email');
+
     res.status(201).json({
       success: true,
-      message: 'Module added successfully.',
-      course: course
+      message: 'Module with video added successfully.',
+      course: populatedCourse
     });
   } catch (error) {
     console.error('Add module error:', error);
+    
+    // Clean up uploaded file on error
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (deleteError) {
+        console.error('Error deleting video file:', deleteError);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'
@@ -359,13 +417,32 @@ export const deleteModule = async (req, res) => {
       });
     }
 
+    // Get the order of the module being deleted
+    const deletedOrder = module.order || 0;
+
+    // Remove the module
     course.modules.pull(moduleId);
+
+    // Reorder remaining modules to fill the gap
+    // Sort modules by order first
+    course.modules.sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    // Renumber modules sequentially starting from 1
+    course.modules.forEach((mod, index) => {
+      mod.order = index + 1;
+    });
+
     await course.save();
+
+    // Populate the course before returning
+    const populatedCourse = await Course.findById(course._id)
+      .populate('teacher', 'fullName email')
+      .populate('students', 'fullName email');
 
     res.status(200).json({
       success: true,
       message: 'Module deleted successfully.',
-      course: course
+      course: populatedCourse
     });
   } catch (error) {
     console.error('Delete module error:', error);

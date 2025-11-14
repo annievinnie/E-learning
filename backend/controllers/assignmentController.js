@@ -63,20 +63,39 @@ export const getAssignmentById = async (req, res) => {
 // Create a new assignment
 export const createAssignment = async (req, res) => {
   try {
-    const { title, description, courseId, dueDate, maxPoints, instructions, allowLateSubmissions, latePenalty } = req.body;
+    const { title, description, courseId, instructions } = req.body;
     const teacherId = req.user.userId || req.user.id;
+    const assignmentFile = req.file;
 
     // Validation
-    if (!title || !description || !courseId || !dueDate) {
+    if (!title || !description || !courseId) {
+      // Clean up uploaded file if validation fails
+      if (assignmentFile && assignmentFile.path) {
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(assignmentFile.path);
+        } catch (deleteError) {
+          console.error('Error deleting assignment file:', deleteError);
+        }
+      }
       return res.status(400).json({
         success: false,
-        message: 'Title, description, course, and due date are required.'
+        message: 'Title, description, and course are required.'
       });
     }
 
     // Check if teacher exists
     const teacher = await User.findById(teacherId);
     if (!teacher || teacher.role !== 'teacher') {
+      // Clean up uploaded file if validation fails
+      if (assignmentFile && assignmentFile.path) {
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(assignmentFile.path);
+        } catch (deleteError) {
+          console.error('Error deleting assignment file:', deleteError);
+        }
+      }
       return res.status(403).json({
         success: false,
         message: 'Only teachers can create assignments.'
@@ -89,18 +108,28 @@ export const createAssignment = async (req, res) => {
       teacher: teacherId 
     });
     if (!course) {
+      // Clean up uploaded file if validation fails
+      if (assignmentFile && assignmentFile.path) {
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(assignmentFile.path);
+        } catch (deleteError) {
+          console.error('Error deleting assignment file:', deleteError);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Course not found or you do not have permission to create assignments for it.'
       });
     }
 
-    // Validate due date
-    const dueDateObj = new Date(dueDate);
-    if (dueDateObj <= new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Due date must be in the future.'
+    // Build attachments array if file is uploaded
+    const attachments = [];
+    if (assignmentFile) {
+      attachments.push({
+        fileName: assignmentFile.originalname,
+        fileUrl: `/uploads/assignments/${assignmentFile.filename}`,
+        fileSize: assignmentFile.size
       });
     }
 
@@ -109,11 +138,10 @@ export const createAssignment = async (req, res) => {
       description,
       course: courseId,
       teacher: teacherId,
-      dueDate: dueDateObj,
-      maxPoints: maxPoints || 100,
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from now (required field)
+      maxPoints: 100, // Default value (required field)
       instructions: instructions || '',
-      allowLateSubmissions: allowLateSubmissions || false,
-      latePenalty: latePenalty || 0,
+      attachments: attachments,
       submissions: [],
       status: 'active'
     });
@@ -132,6 +160,15 @@ export const createAssignment = async (req, res) => {
     });
   } catch (error) {
     console.error('Create assignment error:', error);
+    // Clean up uploaded file on error
+    if (req.file && req.file.path) {
+      try {
+        const fs = await import('fs');
+        fs.unlinkSync(req.file.path);
+      } catch (deleteError) {
+        console.error('Error deleting assignment file:', deleteError);
+      }
+    }
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'
@@ -143,8 +180,9 @@ export const createAssignment = async (req, res) => {
 export const updateAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
-    const { title, description, dueDate, maxPoints, instructions, allowLateSubmissions, latePenalty, status } = req.body;
+    const { title, description, instructions, status } = req.body;
     const teacherId = req.user.userId || req.user.id;
+    const assignmentFile = req.file;
 
     const assignment = await Assignment.findOne({ 
       _id: assignmentId, 
@@ -152,6 +190,15 @@ export const updateAssignment = async (req, res) => {
     });
 
     if (!assignment) {
+      // Clean up uploaded file if assignment not found
+      if (assignmentFile && assignmentFile.path) {
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(assignmentFile.path);
+        } catch (deleteError) {
+          console.error('Error deleting assignment file:', deleteError);
+        }
+      }
       return res.status(404).json({
         success: false,
         message: 'Assignment not found or you do not have permission to modify it.'
@@ -161,16 +208,40 @@ export const updateAssignment = async (req, res) => {
     // Update fields
     if (title) assignment.title = title;
     if (description) assignment.description = description;
-    if (dueDate) {
-      const dueDateObj = new Date(dueDate);
-      // Allow updating due date even if it's in the past (for flexibility)
-      assignment.dueDate = dueDateObj;
-    }
-    if (maxPoints) assignment.maxPoints = maxPoints;
     if (instructions !== undefined) assignment.instructions = instructions;
-    if (allowLateSubmissions !== undefined) assignment.allowLateSubmissions = allowLateSubmissions;
-    if (latePenalty !== undefined) assignment.latePenalty = latePenalty;
     if (status) assignment.status = status;
+
+    // Handle file upload - replace existing attachments if new file is uploaded
+    if (assignmentFile) {
+      // Delete old file if exists
+      if (assignment.attachments && assignment.attachments.length > 0) {
+        try {
+          const fs = await import('fs');
+          const path = await import('path');
+          const { fileURLToPath } = await import('url');
+          const __filename = fileURLToPath(import.meta.url);
+          const __dirname = path.dirname(__filename);
+          
+          assignment.attachments.forEach(attachment => {
+            if (attachment.fileUrl) {
+              const filePath = path.join(__dirname, '..', attachment.fileUrl);
+              if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+              }
+            }
+          });
+        } catch (deleteError) {
+          console.error('Error deleting old assignment file:', deleteError);
+        }
+      }
+      
+      // Add new file
+      assignment.attachments = [{
+        fileName: assignmentFile.originalname,
+        fileUrl: `/uploads/assignments/${assignmentFile.filename}`,
+        fileSize: assignmentFile.size
+      }];
+    }
 
     await assignment.save();
 
@@ -186,6 +257,15 @@ export const updateAssignment = async (req, res) => {
     });
   } catch (error) {
     console.error('Update assignment error:', error);
+    // Clean up uploaded file on error
+    if (req.file && req.file.path) {
+      try {
+        const fs = await import('fs');
+        fs.unlinkSync(req.file.path);
+      } catch (deleteError) {
+        console.error('Error deleting assignment file:', deleteError);
+      }
+    }
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'

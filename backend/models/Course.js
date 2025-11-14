@@ -50,7 +50,10 @@ const moduleSchema = new mongoose.Schema({
     required: true,
     default: 1
   },
-  videos: [videoSchema],
+  video: {
+    type: videoSchema,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

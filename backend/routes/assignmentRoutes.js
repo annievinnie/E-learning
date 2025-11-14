@@ -10,6 +10,7 @@ import {
   getAssignmentStats
 } from '../controllers/assignmentController.js';
 import { verifyToken } from '../middleware/auth.js';
+import { uploadAssignmentFile } from '../middleware/pdfUploadMiddleware.js';
 
 const router = express.Router();
 
@@ -27,8 +28,8 @@ const verifyTeacher = (req, res, next) => {
 // Assignment routes
 router.get('/', verifyToken, verifyTeacher, getTeacherAssignments);
 router.get('/:assignmentId', verifyToken, verifyTeacher, getAssignmentById);
-router.post('/', verifyToken, verifyTeacher, createAssignment);
-router.put('/:assignmentId', verifyToken, verifyTeacher, updateAssignment);
+router.post('/', verifyToken, verifyTeacher, uploadAssignmentFile, createAssignment);
+router.put('/:assignmentId', verifyToken, verifyTeacher, uploadAssignmentFile, updateAssignment);
 router.delete('/:assignmentId', verifyToken, verifyTeacher, deleteAssignment);
 
 // Submission routes

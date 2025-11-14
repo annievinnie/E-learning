@@ -1,5 +1,7 @@
 import Course from '../models/Course.js';
 import User from '../models/User.js';
+import Assignment from '../models/Assignment.js';
+import Progress from '../models/Progress.js';
 
 // Get all available courses for students (with filtering and search)
 export const getAllCourses = async (req, res) => {
@@ -340,11 +342,73 @@ export const getEnrolledCourses = async (req, res) => {
       });
     });
     
+    // Get progress for all enrolled courses
+    const progressRecords = await Progress.find({ 
+      student: userId,
+      course: { $in: enrolledCourses.map(c => c._id) }
+    }).lean();
+    
+    // Create progress map
+    const progressMap = {};
+    progressRecords.forEach(record => {
+      const courseId = record.course.toString();
+      const course = enrolledCourses.find(c => c._id.toString() === courseId);
+      if (course) {
+        const totalModules = course.modules?.length || 0;
+        
+        // Get unique completed modules (in case of duplicates)
+        let completedModules = 0;
+        if (record.completedModules && record.completedModules.length > 0) {
+          const uniqueCompletedIds = new Set();
+          record.completedModules.forEach(m => {
+            const moduleIdStr = m.moduleId ? m.moduleId.toString() : m.moduleId;
+            if (moduleIdStr) {
+              uniqueCompletedIds.add(moduleIdStr);
+            }
+          });
+          completedModules = uniqueCompletedIds.size;
+        }
+        
+        // Cap progress at 100%
+        const progressPercentage = totalModules > 0 
+          ? Math.min(100, Math.round((completedModules / totalModules) * 100))
+          : 0;
+        
+        progressMap[courseId] = {
+          totalModules,
+          completedModules,
+          progressPercentage,
+          lastAccessedAt: record.lastAccessedAt
+        };
+      }
+    });
+    
+    // Add progress to each course
+    const coursesWithProgress = enrolledCourses.map(course => {
+      const courseId = course._id.toString();
+      // Get progress from map or calculate default
+      let progress = progressMap[courseId];
+      if (!progress) {
+        const totalModules = course.modules?.length || 0;
+        progress = {
+          totalModules,
+          completedModules: 0,
+          progressPercentage: 0,
+          lastAccessedAt: null
+        };
+      }
+      
+      return {
+        ...course.toObject(),
+        progress
+      };
+    });
+    
     console.log(`✅ Found ${enrolledCourses.length} enrolled courses for user ${userId}`);
     
     res.status(200).json({
       success: true,
-      courses: enrolledCourses
+      courses: coursesWithProgress
     });
   } catch (error) {
     console.error('Get enrolled courses error:', error);
@@ -387,6 +451,285 @@ export const unenrollFromCourse = async (req, res) => {
     });
   } catch (error) {
     console.error('Unenroll from course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
+// Get assignments for a course (for students)
+export const getCourseAssignments = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.userId || req.user.id;
+    
+    // Find the course
+    const course = await Course.findById(courseId);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found.'
+      });
+    }
+    
+    // Check if course is active
+    if (course.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'This course is not available.'
+      });
+    }
+    
+    // Check if student is enrolled (handle both old format ObjectId and new format with studentId)
+    const isEnrolled = course.students.some(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() === userId.toString();
+      }
+      // Handle legacy format (direct ObjectId)
+      return student.toString() === userId.toString();
+    });
+    
+    if (!isEnrolled) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must be enrolled in this course to access assignments.',
+        requiresEnrollment: true
+      });
+    }
+    
+    // Get all active assignments for this course (only if enrolled)
+    const assignments = await Assignment.find({ 
+      course: courseId,
+      status: 'active' // Only show active assignments
+    })
+      .populate('course', 'title')
+      .populate('teacher', 'fullName email')
+      .sort({ createdAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      assignments: assignments
+    });
+  } catch (error) {
+    console.error('Get course assignments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
+// Mark a module as completed
+export const markModuleComplete = async (req, res) => {
+  try {
+    const { courseId, moduleId } = req.params;
+    const userId = req.user.userId || req.user.id;
+
+    // Find the course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found.'
+      });
+    }
+
+    // Check if student is enrolled
+    const isEnrolled = course.students.some(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() === userId.toString();
+      }
+      return student.toString() === userId.toString();
+    });
+
+    if (!isEnrolled) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must be enrolled in this course to track progress.'
+      });
+    }
+
+    // Check if module exists in course
+    const module = course.modules.id(moduleId);
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found in this course.'
+      });
+    }
+
+    // Find or create progress record
+    let progress = await Progress.findOne({ student: userId, course: courseId });
+    
+    if (!progress) {
+      progress = new Progress({
+        student: userId,
+        course: courseId,
+        completedModules: []
+      });
+    }
+
+    // Check if module is already completed (normalize IDs for comparison)
+    const normalizedModuleId = moduleId.toString();
+    const isAlreadyCompleted = progress.completedModules.some(
+      m => {
+        const existingId = m.moduleId ? m.moduleId.toString() : m.moduleId;
+        return existingId === normalizedModuleId;
+      }
+    );
+
+    if (!isAlreadyCompleted) {
+      // Use the actual module's _id from the course to ensure consistency
+      const actualModuleId = module._id || moduleId;
+      progress.completedModules.push({
+        moduleId: actualModuleId,
+        completedAt: new Date()
+      });
+      progress.lastAccessedAt = new Date();
+      await progress.save();
+    } else {
+      // Module already completed, just update last accessed
+      progress.lastAccessedAt = new Date();
+      await progress.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Module marked as completed.',
+      progress: progress
+    });
+  } catch (error) {
+    console.error('Mark module complete error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
+// Get course progress for a student
+export const getCourseProgress = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.userId || req.user.id;
+
+    // Find the course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found.'
+      });
+    }
+
+    // Check if student is enrolled
+    const isEnrolled = course.students.some(student => {
+      if (typeof student === 'object' && student.studentId) {
+        return student.studentId.toString() === userId.toString();
+      }
+      return student.toString() === userId.toString();
+    });
+
+    if (!isEnrolled) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must be enrolled in this course to view progress.'
+      });
+    }
+
+    // Get progress record
+    const progress = await Progress.findOne({ student: userId, course: courseId });
+
+    // Calculate progress - get unique completed modules only
+    const totalModules = course.modules.length;
+    let completedModules = 0;
+    
+    if (progress && progress.completedModules) {
+      // Get unique module IDs (in case of duplicates)
+      const uniqueCompletedIds = new Set();
+      progress.completedModules.forEach(m => {
+        const moduleIdStr = m.moduleId ? m.moduleId.toString() : m.moduleId;
+        if (moduleIdStr) {
+          uniqueCompletedIds.add(moduleIdStr);
+        }
+      });
+      completedModules = uniqueCompletedIds.size;
+    }
+    
+    // Cap progress at 100%
+    const progressPercentage = totalModules > 0 
+      ? Math.min(100, Math.round((completedModules / totalModules) * 100))
+      : 0;
+
+    res.status(200).json({
+      success: true,
+      progress: {
+        totalModules,
+        completedModules,
+        progressPercentage,
+        completedModuleIds: progress ? progress.completedModules.map(m => m.moduleId.toString()) : [],
+        lastAccessedAt: progress?.lastAccessedAt || null
+      }
+    });
+  } catch (error) {
+    console.error('Get course progress error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
+// Get progress for all enrolled courses
+export const getAllCoursesProgress = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+
+    // Get all progress records for this student
+    const progressRecords = await Progress.find({ student: userId })
+      .populate('course', 'title modules')
+      .lean();
+
+    // Create a map of courseId -> progress
+    const progressMap = {};
+    progressRecords.forEach(record => {
+      const courseId = record.course._id.toString();
+      const totalModules = record.course.modules?.length || 0;
+      
+      // Get unique completed modules (in case of duplicates)
+      let completedModules = 0;
+      if (record.completedModules && record.completedModules.length > 0) {
+        const uniqueCompletedIds = new Set();
+        record.completedModules.forEach(m => {
+          const moduleIdStr = m.moduleId ? m.moduleId.toString() : m.moduleId;
+          if (moduleIdStr) {
+            uniqueCompletedIds.add(moduleIdStr);
+          }
+        });
+        completedModules = uniqueCompletedIds.size;
+      }
+      
+      // Cap progress at 100%
+      const progressPercentage = totalModules > 0 
+        ? Math.min(100, Math.round((completedModules / totalModules) * 100))
+        : 0;
+
+      progressMap[courseId] = {
+        totalModules,
+        completedModules,
+        progressPercentage,
+        lastAccessedAt: record.lastAccessedAt
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      progress: progressMap
+    });
+  } catch (error) {
+    console.error('Get all courses progress error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'

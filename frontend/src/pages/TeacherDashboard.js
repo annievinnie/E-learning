@@ -244,7 +244,22 @@ return;
 }
 
 try {
-const response = await API.post(`/courses/${selectedCourse._id}/modules`, moduleData);
+// Create FormData for file upload
+const formData = new FormData();
+formData.append('title', moduleData.title);
+formData.append('description', moduleData.description);
+formData.append('order', moduleData.order || (selectedCourse.modules ? selectedCourse.modules.length + 1 : 1));
+if (moduleData.videoFile) {
+formData.append('video', moduleData.videoFile);
+}
+// Duration is automatically calculated, always include it
+formData.append('duration', moduleData.duration || '0:00');
+
+const response = await API.post(`/courses/${selectedCourse._id}/modules`, formData, {
+headers: {
+'Content-Type': 'multipart/form-data'
+}
+});
 
 if (response.data.success) {
 const updatedCourse = response.data.course;
@@ -254,7 +269,7 @@ course._id === selectedCourse._id ? updatedCourse : course
 ));
 
 console.log('✅ Module created:', updatedCourse);
-alert('Module created successfully!');
+alert('Module with video created successfully!');
 } else {
 alert(response.data.message || 'Failed to create module.');
 throw new Error(response.data.message);
@@ -295,79 +310,6 @@ alert(error.response?.data?.message || 'Failed to delete module. Please try agai
 }
 };
 
-// Video management functions
-const handleAddVideo = async (module, videoData) => {
-if (!selectedCourse || !selectedCourse._id || !module || !module.id) {
-alert('Please select a course and module first.');
-return;
-}
-
-try {
-const formData = new FormData();
-formData.append('video', videoData.videoFile);
-formData.append('title', videoData.title);
-formData.append('description', videoData.description);
-formData.append('duration', videoData.duration);
-if (videoData.order) {
-formData.append('order', videoData.order);
-}
-
-const response = await API.post(
-`/courses/${selectedCourse._id}/modules/${module.id || module._id}/videos`,
-formData
-);
-
-if (response.data.success) {
-const updatedCourse = response.data.course;
-setSelectedCourse(updatedCourse);
-setCourses(prev => prev.map(course =>
-course._id === selectedCourse._id ? updatedCourse : course
-));
-
-console.log('✅ Video uploaded:', response.data);
-alert('Video uploaded successfully!');
-} else {
-alert(response.data.message || 'Failed to upload video.');
-throw new Error(response.data.message);
-}
-} catch (error) {
-console.error('Error uploading video:', error);
-alert(error.response?.data?.message || 'Failed to upload video. Please try again.');
-throw error;
-}
-};
-
-const handleDeleteVideo = async (videoId, module) => {
-if (!selectedCourse || !selectedCourse._id || !module || !module.id) {
-alert('Please select a course and module first.');
-return;
-}
-
-if (window.confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
-try {
-const response = await API.delete(
-`/courses/${selectedCourse._id}/modules/${module.id || module._id}/videos/${videoId}`
-);
-
-if (response.data.success) {
-const updatedCourse = response.data.course;
-setSelectedCourse(updatedCourse);
-setCourses(prev => prev.map(course =>
-course._id === selectedCourse._id ? updatedCourse : course
-));
-
-console.log('✅ Video deleted:', videoId);
-alert('Video deleted successfully!');
-} else {
-alert(response.data.message || 'Failed to delete video.');
-}
-} catch (error) {
-console.error('Error deleting video:', error);
-alert(error.response?.data?.message || 'Failed to delete video. Please try again.');
-}
-}
-};
-
 // Assignment management functions
 const fetchAssignments = async () => {
 setLoadingAssignments(true);
@@ -391,12 +333,19 @@ setLoadingAssignments(false);
 const handleCreateAssignment = async (assignmentData) => {
 setIsSubmittingAssignment(true);
 try {
-const response = await API.post('/assignments', {
-title: assignmentData.title,
-description: assignmentData.description,
-courseId: assignmentData.courseId,
-dueDate: assignmentData.dueDate,
-maxPoints: assignmentData.maxPoints || 100
+// Create FormData for file upload
+const formData = new FormData();
+formData.append('title', assignmentData.title);
+formData.append('description', assignmentData.description);
+formData.append('courseId', assignmentData.courseId);
+if (assignmentData.assignmentFile) {
+  formData.append('assignmentFile', assignmentData.assignmentFile);
+}
+
+const response = await API.post('/assignments', formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
 });
 
 if (response.data.success) {
@@ -420,12 +369,19 @@ setIsSubmittingAssignment(false);
 const handleUpdateAssignment = async (assignmentId, assignmentData) => {
 setIsUpdatingAssignment(true);
 try {
-const response = await API.put(`/assignments/${assignmentId}`, {
-title: assignmentData.title,
-description: assignmentData.description,
-courseId: assignmentData.courseId,
-dueDate: assignmentData.dueDate,
-maxPoints: assignmentData.maxPoints || 100
+// Create FormData for file upload
+const formData = new FormData();
+formData.append('title', assignmentData.title);
+formData.append('description', assignmentData.description);
+formData.append('courseId', assignmentData.courseId);
+if (assignmentData.assignmentFile) {
+  formData.append('assignmentFile', assignmentData.assignmentFile);
+}
+
+const response = await API.put(`/assignments/${assignmentId}`, formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
 });
 
 if (response.data.success) {
@@ -505,8 +461,6 @@ setSelectedCourse(null);
 }}
 onAddModule={handleAddModule}
 onDeleteModule={handleDeleteModule}
-onAddVideo={handleAddVideo}
-onDeleteVideo={handleDeleteVideo}
 />
 );
 

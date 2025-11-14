@@ -4,7 +4,11 @@ import {
   getCourseDetails,
   enrollInCourse,
   getEnrolledCourses,
-  unenrollFromCourse
+  unenrollFromCourse,
+  getCourseAssignments,
+  markModuleComplete,
+  getCourseProgress,
+  getAllCoursesProgress
 } from '../controllers/studentController.js';
 import { verifyToken, verifyStudent } from '../middleware/auth.js';
 
@@ -26,6 +30,14 @@ router.get('/enrolled', verifyToken, verifyStudent, getEnrolledCourses);
 
 // Unenroll from a course
 router.delete('/courses/:courseId/enroll', verifyToken, verifyStudent, unenrollFromCourse);
+
+// Get assignments for a course
+router.get('/courses/:courseId/assignments', verifyToken, getCourseAssignments);
+
+// Progress tracking routes
+router.post('/courses/:courseId/modules/:moduleId/complete', verifyToken, verifyStudent, markModuleComplete);
+router.get('/courses/:courseId/progress', verifyToken, verifyStudent, getCourseProgress);
+router.get('/progress', verifyToken, verifyStudent, getAllCoursesProgress);
 
 export default router;
 
