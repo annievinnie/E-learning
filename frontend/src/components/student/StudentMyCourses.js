@@ -1,17 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlay, FaClock, FaUsers, FaStar, FaBookOpen } from 'react-icons/fa';
+import { FaPlay, FaClock, FaUsers, FaStar, FaBookOpen, FaCertificate } from 'react-icons/fa';
 import API from '../../api';
 import Footer from '../Footer';
+import CourseCertificate from './CourseCertificate';
 
 const StudentMyCourses = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCertificate, setSelectedCertificate] = useState(null);
+  const [studentName, setStudentName] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchEnrolledCourses();
+    
+    // Get student name from localStorage
+    const name = localStorage.getItem('name') || 'Student';
+    setStudentName(name);
+    
+    // Refresh progress when page becomes visible (user returns from watching video)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchEnrolledCourses();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', fetchEnrolledCourses);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', fetchEnrolledCourses);
+    };
   }, []);
 
   const fetchEnrolledCourses = async () => {
@@ -35,8 +57,20 @@ const StudentMyCourses = () => {
     }
   };
 
-  const handleCourseClick = (courseId) => {
-    navigate(`/course/${courseId}`);
+  const handleCourseClick = (courseId, progress) => {
+    // If course is 100% complete, show certificate instead of navigating
+    if (progress.progressPercentage === 100) {
+      const course = courses.find(c => (c._id || c.id) === courseId);
+      if (course) {
+        setSelectedCertificate(course);
+      }
+    } else {
+      navigate(`/course/${courseId}`);
+    }
+  };
+
+  const handleCloseCertificate = () => {
+    setSelectedCertificate(null);
   };
 
   const formatDate = (dateString) => {
@@ -79,6 +113,14 @@ const StudentMyCourses = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-indigo-50 flex flex-col">
+      {/* Certificate Modal */}
+      {selectedCertificate && (
+        <CourseCertificate
+          course={selectedCertificate}
+          studentName={studentName}
+          onClose={handleCloseCertificate}
+        />
+      )}
       <div className="container mx-auto px-4 py-8 flex-grow">
         {/* Header */}
         <div className="mb-8">
@@ -106,6 +148,13 @@ const StudentMyCourses = () => {
                     ? course.teacher.profilePicture 
                     : `http://localhost:5000${course.teacher.profilePicture}`)
                 : '';
+              
+              // Get progress from course object (included in API response)
+              const progress = course.progress || { 
+                progressPercentage: 0, 
+                completedModules: 0, 
+                totalModules: course.modules?.length || 0 
+              };
 
               return (
                 <div
@@ -188,27 +237,53 @@ const StudentMyCourses = () => {
                       </div>
                     )}
 
-                    {/* Progress Bar (Placeholder) */}
+                    {/* Progress Bar */}
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-xs font-medium text-gray-600">Progress</span>
-                        <span className="text-xs text-gray-500">0%</span>
+                        <span className="text-xs text-gray-500">{progress.progressPercentage}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-indigo-600 h-2 rounded-full" style={{ width: '0%' }}></div>
+                        <div 
+                          className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${progress.progressPercentage}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {progress.completedModules} of {progress.totalModules} modules completed
                       </div>
                     </div>
 
-                    {/* Continue Button */}
+                    {/* Action Button - Changes based on progress */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCourseClick(course._id || course.id);
+                        handleCourseClick(course._id || course.id, progress);
                       }}
-                      className="mt-auto w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 hover:from-indigo-700 hover:to-purple-700 flex items-center justify-center gap-2"
+                      className={`mt-auto w-full px-4 py-2.5 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 ${
+                        progress.progressPercentage === 100
+                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                          : progress.progressPercentage === 0
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
+                          : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
+                      }`}
                     >
-                      <FaPlay className="text-sm" />
-                      Continue Learning
+                      {progress.progressPercentage === 100 ? (
+                        <>
+                          <FaCertificate className="text-sm" />
+                          Completion Certificate
+                        </>
+                      ) : progress.progressPercentage === 0 ? (
+                        <>
+                          <FaPlay className="text-sm" />
+                          Start Learning
+                        </>
+                      ) : (
+                        <>
+                          <FaPlay className="text-sm" />
+                          Continue Learning
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
