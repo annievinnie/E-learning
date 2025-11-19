@@ -168,6 +168,11 @@ const Navbar = () => {
     return null;
   }
 
+  // Hide Navbar completely for admin and teacher dashboards
+  if (location.pathname === '/AdminDashboard' || location.pathname === '/TeacherDashboard') {
+    return null;
+  }
+
   // Check if we're on a dashboard page with sidebar (to adjust navbar positioning)
   // StudentDashboard doesn't have a sidebar, so we don't add margin for it
   const isDashboardWithSidebar = location.pathname === '/AdminDashboard' || 
@@ -225,7 +230,7 @@ const Navbar = () => {
         </NavLinks>
 
         <UserSection>
-          {isLoggedIn ? (
+          {isLoggedIn && user?.role === 'student' ? (
             <AvatarContainer>
               <UserInfo>
                 <UserDetails>
@@ -271,7 +276,7 @@ const Navbar = () => {
                 </DropdownMenu>
               )}
             </AvatarContainer>
-          ) : (
+          ) : !isLoggedIn ? (
             <AuthButtons>
               <LoginButton onClick={handleLogin}>
                 Login
@@ -280,7 +285,7 @@ const Navbar = () => {
                 Sign Up
               </SignupButton>
             </AuthButtons>
-          )}
+          ) : null}
         </UserSection>
 
         {/* Mobile Menu Button */}

@@ -9,6 +9,7 @@ import AdminStudents from '../components/admin/AdminStudents';
 import AdminTeachers from '../components/admin/AdminTeachers';
 import AdminCourses from '../components/admin/AdminCourses';
 import AdminPayments from '../components/admin/AdminPayments';
+import AdminProfile from '../components/profile/AdminProfile';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -1211,6 +1212,16 @@ const AdminDashboard = () => {
             onTeacherSelect={setSelectedTeacherForRevenue}
             onShowAllTeachers={() => setSelectedTeacherForRevenue(null)}
             onRefresh={fetchTeacherRevenue}
+          />
+        );
+
+      case 'profile':
+        return (
+          <AdminProfile
+            user={user}
+            onUpdate={(updatedUser) => {
+              setUser(updatedUser);
+            }}
           />
         );
 
