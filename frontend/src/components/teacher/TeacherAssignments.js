@@ -11,6 +11,14 @@ const TeacherAssignments = ({
   editingAssignment
 }) => {
   const [showAddAssignmentForm, setShowAddAssignmentForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Reset to page 1 when assignments change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [assignments.length]);
+  
   const [assignmentFormData, setAssignmentFormData] = useState({
     title: '',
     description: '',
@@ -131,7 +139,7 @@ const TeacherAssignments = ({
         alignItems: 'center',
         marginBottom: '2rem' 
       }}>
-        <h1 style={{ color: '#2e7d32', fontSize: '2.5rem', marginBottom: '0' }}>
+        <h1 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '2.5rem', marginBottom: '0' }}>
           Assignments
         </h1>
         <button
@@ -174,7 +182,7 @@ const TeacherAssignments = ({
           marginBottom: '2rem',
           border: '1px solid #e0e0e0'
         }}>
-          <h3 style={{ color: '#2e7d32', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+          <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
             Create New Assignment
           </h3>
           
@@ -345,7 +353,7 @@ const TeacherAssignments = ({
           marginBottom: '2rem',
           border: '1px solid #e0e0e0'
         }}>
-          <h3 style={{ color: '#2e7d32', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+          <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
             Edit Assignment
           </h3>
           
@@ -518,7 +526,7 @@ const TeacherAssignments = ({
         borderRadius: '8px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       }}>
-        <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem' }}>
           My Assignments ({assignments.length})
         </h3>
         
@@ -531,18 +539,18 @@ const TeacherAssignments = ({
             <p>No assignments found. Create your first assignment using the button above.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto' }} className="table-container">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f5f5f5' }}>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Title</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Course</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>File</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Actions</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Title</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Course</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>File</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {assignments.map((assignment) => (
+                {assignments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((assignment) => (
                   <tr key={assignment._id} style={{ borderBottom: '1px solid #eee' }}>
                     <td style={{ padding: '1rem' }}>
                       <div style={{ fontWeight: '500' }}>{assignment.title}</div>
@@ -567,7 +575,7 @@ const TeacherAssignments = ({
                       )}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} className="button-group">
                         <button
                           onClick={() => handleEditClick(assignment)}
                           style={{
@@ -578,7 +586,8 @@ const TeacherAssignments = ({
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
-                            transition: 'background-color 0.3s ease'
+                            transition: 'background-color 0.3s ease',
+                            whiteSpace: 'nowrap'
                           }}
                           onMouseEnter={(e) => e.target.style.backgroundColor = '#1976d2'}
                           onMouseLeave={(e) => e.target.style.backgroundColor = '#2196f3'}
@@ -595,7 +604,8 @@ const TeacherAssignments = ({
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
-                            transition: 'background-color 0.3s ease'
+                            transition: 'background-color 0.3s ease',
+                            whiteSpace: 'nowrap'
                           }}
                           onMouseEnter={(e) => e.target.style.backgroundColor = '#d32f2f'}
                           onMouseLeave={(e) => e.target.style.backgroundColor = '#f44336'}
@@ -608,6 +618,94 @@ const TeacherAssignments = ({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {assignments.length > itemsPerPage && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginTop: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px'
+          }}>
+            <div style={{ color: '#666', fontSize: '0.9rem' }}>
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, assignments.length)} of {assignments.length} assignments
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: currentPage === 1 ? '#e0e0e0' : '#667eea',
+                  color: currentPage === 1 ? '#999' : 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== 1) {
+                    e.target.style.backgroundColor = '#5a6fd8';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== 1) {
+                    e.target.style.backgroundColor = '#667eea';
+                    e.target.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                Previous
+              </button>
+              <span style={{ 
+                padding: '0.5rem 1rem', 
+                backgroundColor: 'white', 
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#667eea',
+                border: '1px solid #667eea'
+              }}>
+                Page {currentPage} of {Math.ceil(assignments.length / itemsPerPage)}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(assignments.length / itemsPerPage), prev + 1))}
+                disabled={currentPage === Math.ceil(assignments.length / itemsPerPage)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: currentPage === Math.ceil(assignments.length / itemsPerPage) ? '#e0e0e0' : '#667eea',
+                  color: currentPage === Math.ceil(assignments.length / itemsPerPage) ? '#999' : 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: currentPage === Math.ceil(assignments.length / itemsPerPage) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== Math.ceil(assignments.length / itemsPerPage)) {
+                    e.target.style.backgroundColor = '#5a6fd8';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== Math.ceil(assignments.length / itemsPerPage)) {
+                    e.target.style.backgroundColor = '#667eea';
+                    e.target.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
