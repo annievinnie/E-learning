@@ -45,7 +45,7 @@ const AdminProfile = ({ user, onUpdate }) => {
           setProfilePicturePreview(user.profilePicture);
         } else {
           // Local file path - construct full URL
-          setProfilePicturePreview(`http://localhost:5000${user.profilePicture}`);
+          setProfilePicturePreview(`http://localhost:5001${user.profilePicture}`);
         }
       } else {
         setProfilePicturePreview('');
@@ -123,7 +123,7 @@ const AdminProfile = ({ user, onUpdate }) => {
             ...prev,
             profilePicture: response.data.profilePicture
           }));
-          setProfilePicturePreview(`http://localhost:5000${response.data.profilePicture}`);
+          setProfilePicturePreview(`http://localhost:5001${response.data.profilePicture}`);
         }
         
         // Update user in parent component
@@ -469,7 +469,7 @@ const AdminProfile = ({ user, onUpdate }) => {
                 <img
                   src={profilePicturePreview || (formData.profilePicture?.startsWith('http') 
                     ? formData.profilePicture 
-                    : `http://localhost:5000${formData.profilePicture}`)}
+                    : `http://localhost:5001${formData.profilePicture}`)}
                   alt="Profile preview"
                   style={{
                     width: '150px',

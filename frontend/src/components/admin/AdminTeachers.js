@@ -42,6 +42,13 @@ const AdminTeachers = ({
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [editFormData, setEditFormData] = useState({ fullName: '', email: '', password: '', isApproved: true });
   const [editFormErrors, setEditFormErrors] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset to page 1 when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [teacherFilter]);
 
   const handleTeacherFormChange = (e) => {
     const { name, value } = e.target;
@@ -577,7 +584,7 @@ const AdminTeachers = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {teachers.filter(t => t.isApproved).map((teacher) => (
+                  {teachers.filter(t => t.isApproved).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((teacher) => (
                     <tr 
                       key={teacher.id || teacher._id} 
                       style={{ 
@@ -621,6 +628,94 @@ const AdminTeachers = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {teachers.filter(t => t.isApproved).length > itemsPerPage && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginTop: '1.5rem',
+              padding: '1rem',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px'
+            }}>
+              <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, teachers.filter(t => t.isApproved).length)} of {teachers.filter(t => t.isApproved).length} teachers
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === 1 ? '#e0e0e0' : '#667eea',
+                    color: currentPage === 1 ? '#999' : 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== 1) {
+                      e.target.style.backgroundColor = '#5a6fd8';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPage !== 1) {
+                      e.target.style.backgroundColor = '#667eea';
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ 
+                  padding: '0.5rem 1rem', 
+                  backgroundColor: 'white', 
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  color: '#667eea',
+                  border: '1px solid #667eea'
+                }}>
+                  Page {currentPage} of {Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage)}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage), prev + 1))}
+                  disabled={currentPage === Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage) ? '#e0e0e0' : '#667eea',
+                    color: currentPage === Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage) ? '#999' : 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: currentPage === Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage) ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage)) {
+                      e.target.style.backgroundColor = '#5a6fd8';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPage !== Math.ceil(teachers.filter(t => t.isApproved).length / itemsPerPage)) {
+                      e.target.style.backgroundColor = '#667eea';
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </SectionCard>

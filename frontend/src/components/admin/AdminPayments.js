@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HeaderActions, PageTitle, SectionCard, SectionTitle, Button, EmptyState } from './AdminSharedStyles';
 
 const AdminPayments = ({
@@ -9,6 +9,14 @@ const AdminPayments = ({
   onShowAllTeachers,
   onRefresh
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Reset to page 1 when teacher revenue data or filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [teacherRevenue.length, selectedTeacherForRevenue]);
+  
   const selectedTeacherData = selectedTeacherForRevenue 
     ? teacherRevenue.find(t => (t.teacherId || t._id) === selectedTeacherForRevenue)
     : null;
@@ -49,7 +57,7 @@ const AdminPayments = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {teacherRevenue.map((teacher) => (
+                  {teacherRevenue.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((teacher) => (
                     <tr 
                       key={teacher.teacherId || teacher._id}
                       style={{ 
@@ -66,7 +74,7 @@ const AdminPayments = ({
                             <img
                               src={teacher.profilePicture.startsWith('http') 
                                 ? teacher.profilePicture 
-                                : `http://localhost:5000${teacher.profilePicture}`}
+                                : `http://localhost:5001${teacher.profilePicture}`}
                               alt={teacher.teacherName}
                               style={{
                                 width: '40px',
@@ -88,7 +96,7 @@ const AdminPayments = ({
                       <td style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
                         {teacher.totalStudents || 0}
                       </td>
-                      <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', color: '#2e7d32' }}>
+                      <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', color: '#667eea' }}>
                         ${(teacher.totalRevenue || 0).toFixed(2)}
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
@@ -106,6 +114,94 @@ const AdminPayments = ({
               </table>
             </div>
           )}
+          
+          {/* Pagination Controls */}
+          {teacherRevenue.length > itemsPerPage && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginTop: '1.5rem',
+              padding: '1rem',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px'
+            }}>
+              <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, teacherRevenue.length)} of {teacherRevenue.length} teachers
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === 1 ? '#e0e0e0' : '#667eea',
+                    color: currentPage === 1 ? '#999' : 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== 1) {
+                      e.target.style.backgroundColor = '#5a6fd8';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPage !== 1) {
+                      e.target.style.backgroundColor = '#667eea';
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ 
+                  padding: '0.5rem 1rem', 
+                  backgroundColor: 'white', 
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  color: '#667eea',
+                  border: '1px solid #667eea'
+                }}>
+                  Page {currentPage} of {Math.ceil(teacherRevenue.length / itemsPerPage)}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(teacherRevenue.length / itemsPerPage), prev + 1))}
+                  disabled={currentPage === Math.ceil(teacherRevenue.length / itemsPerPage)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === Math.ceil(teacherRevenue.length / itemsPerPage) ? '#e0e0e0' : '#667eea',
+                    color: currentPage === Math.ceil(teacherRevenue.length / itemsPerPage) ? '#999' : 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: currentPage === Math.ceil(teacherRevenue.length / itemsPerPage) ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== Math.ceil(teacherRevenue.length / itemsPerPage)) {
+                      e.target.style.backgroundColor = '#5a6fd8';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPage !== Math.ceil(teacherRevenue.length / itemsPerPage)) {
+                      e.target.style.backgroundColor = '#667eea';
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </SectionCard>
       ) : selectedTeacherData ? (
         <div>
@@ -115,7 +211,7 @@ const AdminPayments = ({
                 <img
                   src={selectedTeacherData.profilePicture.startsWith('http') 
                     ? selectedTeacherData.profilePicture 
-                    : `http://localhost:5000${selectedTeacherData.profilePicture}`}
+                    : `http://localhost:5001${selectedTeacherData.profilePicture}`}
                   alt={selectedTeacherData.teacherName}
                   style={{
                     width: '60px',
@@ -133,7 +229,7 @@ const AdminPayments = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
               <div style={{ padding: '1rem', background: '#f5f5f5', borderRadius: '8px' }}>
                 <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Total Revenue</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#2e7d32' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#667eea' }}>
                   ${(selectedTeacherData.totalRevenue || 0).toFixed(2)}
                 </div>
               </div>
@@ -177,7 +273,7 @@ const AdminPayments = ({
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>Revenue</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#2e7d32' }}>
+                        <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#667eea' }}>
                           ${(course.revenue || 0).toFixed(2)}
                         </div>
                       </div>
@@ -208,7 +304,7 @@ const AdminPayments = ({
                               <div style={{ textAlign: 'right' }}>
                                 {student.amount > 0 ? (
                                   <>
-                                    <div style={{ fontWeight: '600', color: '#2e7d32' }}>
+                                    <div style={{ fontWeight: '600', color: '#667eea' }}>
                                       ${(student.amount || 0).toFixed(2)}
                                     </div>
                                     {student.paidAt && (

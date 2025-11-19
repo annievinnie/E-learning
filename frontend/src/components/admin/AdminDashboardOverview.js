@@ -32,7 +32,7 @@ const AdminDashboardOverview = ({ user, dashboardStats }) => {
           <StatValue>{dashboardStats.pendingApplications.toLocaleString()}</StatValue>
         </StatCard>
 
-        <StatCard color1="#2e7d32" color2="#4caf50">
+        <StatCard color1="#667eea" color2="#764ba2">
           <StatTitle>Total Revenue</StatTitle>
           <StatValue>${dashboardStats.totalRevenue.toFixed(2)}</StatValue>
         </StatCard>
