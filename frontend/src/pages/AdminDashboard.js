@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { Menu, X } from 'lucide-react';
 import API from '../api';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminDashboardOverview from '../components/admin/AdminDashboardOverview';
@@ -13,6 +14,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pendingApplications, setPendingApplications] = useState([]);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -632,6 +634,10 @@ const AdminDashboard = () => {
     min-height: 100vh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 2rem;
+
+    @media (max-width: 768px) {
+      padding: 1rem;
+    }
   `;
 
   const ContentWrapper = styled.div`
@@ -641,6 +647,13 @@ const AdminDashboard = () => {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     margin-left: 280px;
     min-height: calc(100vh - 4rem);
+
+    @media (max-width: 768px) {
+      margin-left: 0;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-top: 70px; /* Space for mobile navbar */
+    }
   `;
 
   const PageTitle = styled.h1`
@@ -652,6 +665,10 @@ const AdminDashboard = () => {
     background-clip: text;
     margin-bottom: 0.5rem;
     letter-spacing: -0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 2rem;
+    }
   `;
 
   const PageSubtitle = styled.p`
@@ -659,6 +676,10 @@ const AdminDashboard = () => {
     font-size: 1.2rem;
     margin-bottom: 2rem;
     font-weight: 400;
+
+    @media (max-width: 768px) {
+      font-size: 1rem;
+    }
   `;
 
   const StatsGrid = styled.div`
@@ -666,6 +687,11 @@ const AdminDashboard = () => {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
     margin-bottom: 2rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
   `;
 
   const StatCard = styled.div`
@@ -1008,6 +1034,52 @@ const AdminDashboard = () => {
     margin-left: 0.5rem;
   `;
 
+  const MobileMenuButton = styled.button`
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1001;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    @media (max-width: 768px) {
+      display: block;
+    }
+  `;
+
+  const MobileOverlay = styled.div`
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    animation: fadeIn 0.3s ease;
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+      display: ${props => props.$isOpen ? 'block' : 'none'};
+    }
+  `;
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -1149,12 +1221,25 @@ const AdminDashboard = () => {
 
   return (
     <DashboardContainer>
+      {/* Mobile Hamburger Menu Button */}
+      <MobileMenuButton onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+        {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+      </MobileMenuButton>
+
+      {/* Mobile Overlay */}
+      {isSidebarOpen && <MobileOverlay $isOpen={isSidebarOpen} onClick={() => setIsSidebarOpen(false)} />}
+
       {/* Sidebar */}
       <AdminSidebar
         activeSection={activeSection}
-        onSectionChange={handleSectionChange}
+        onSectionChange={(section) => {
+          handleSectionChange(section);
+          setIsSidebarOpen(false); // Close sidebar on mobile when section changes
+        }}
         user={user}
         onLogout={handleLogout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       {/* Main Content */}
