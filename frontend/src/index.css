@@ -1,3 +1,4 @@
+/* Tailwind CSS directives - these are valid Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -30,3 +31,54 @@ code {
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* Table responsiveness */
+  table {
+    font-size: 0.85rem;
+  }
+
+  table th,
+  table td {
+    padding: 0.5rem !important;
+    font-size: 0.8rem;
+  }
+
+  /* Make tables scrollable on mobile */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Stack buttons on mobile */
+  .button-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .button-group button {
+    width: 100%;
+  }
+
+  /* Adjust form inputs */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+
+  /* Login page mobile styles */
+  .login-container {
+    flex-direction: column !important;
+  }
+
+  .login-form-section {
+    padding: 20px !important;
+    min-width: auto !important;
+    width: 100% !important;
+  }
+
+  .login-background-section {
+    display: none !important;
+  }
+}
+

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { LogOut, GraduationCap, LayoutDashboard, Users, UserCog, BookOpen, DollarSign, X } from 'lucide-react';
 
 // Styled Components
 const SidebarContainer = styled.div`
@@ -15,6 +16,7 @@ const SidebarContainer = styled.div`
   flex-direction: column;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
   overflow: hidden;
+  transition: transform 0.3s ease;
 
   &::before {
     content: '';
@@ -25,6 +27,10 @@ const SidebarContainer = styled.div`
     bottom: 0;
     background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
     pointer-events: none;
+  }
+
+  @media (max-width: 768px) {
+    transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-100%)'};
   }
 `;
 
@@ -223,6 +229,9 @@ const LogoutButton = styled.button`
   box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &::before {
     content: '';
@@ -237,6 +246,11 @@ const LogoutButton = styled.button`
     transition: width 0.6s, height 0.6s;
   }
 
+  svg {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+  }
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(244, 67, 54, 0.5);
@@ -247,27 +261,47 @@ const LogoutButton = styled.button`
       width: 300px;
       height: 300px;
     }
+
+    svg {
+      transform: translateX(4px) scale(1.1);
+    }
   }
 
   &:active {
     transform: translateY(0) scale(0.98);
+    
+    svg {
+      transform: translateX(2px) scale(1.05);
+    }
   }
 `;
 
+// Icon mapping
+const iconMap = {
+  dashboard: LayoutDashboard,
+  students: Users,
+  teachers: UserCog,
+  courses: BookOpen,
+  payments: DollarSign,
+};
+
 // ------------------ Sidebar Component ------------------
-const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
+const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout, isOpen = false, onClose }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'students', label: 'Students', icon: '👥' },
-    { id: 'teachers', label: 'Teachers', icon: '👨‍🏫' },
-    { id: 'courses', label: 'Courses', icon: '📚' },
-    { id: 'payments', label: 'Payments', icon: '💰' },
+    { id: 'dashboard', label: 'Dashboard', iconKey: 'dashboard' },
+    { id: 'students', label: 'Students', iconKey: 'students' },
+    { id: 'teachers', label: 'Teachers', iconKey: 'teachers' },
+    { id: 'courses', label: 'Courses', iconKey: 'courses' },
+    { id: 'payments', label: 'Payments', iconKey: 'payments' },
   ];
 
   const handleNavClick = (sectionId) => {
     onSectionChange(sectionId);
+    if (typeof window !== 'undefined' && window.innerWidth <= 768 && onClose) {
+      onClose();
+    }
   };
 
   const handleLogout = () => {
@@ -276,12 +310,41 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
     }
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
   return (
-    <SidebarContainer>
+    <SidebarContainer $isOpen={isOpen}>
+      {/* Mobile Close Button */}
+      {isMobile && isOpen && (
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'rgba(255, 255, 255, 0.2)',
+            border: 'none',
+            color: 'white',
+            padding: '0.5rem',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+            width: '36px',
+            height: '36px',
+          }}
+        >
+          <X size={20} />
+        </button>
+      )}
       {/* Header */}
       <SidebarHeader>
         <LogoContainer>
-          <LogoIcon>🎓</LogoIcon>
+          <LogoIcon>
+            <GraduationCap size={36} />
+          </LogoIcon>
           <LogoText>E-Learning</LogoText>
         </LogoContainer>
         <AdminBadge>Admin Panel</AdminBadge>
@@ -299,7 +362,9 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <NavIcon>{item.icon}</NavIcon>
+              <NavIcon>
+                {React.createElement(iconMap[item.iconKey], { size: 20 })}
+              </NavIcon>
               <NavText active={isActive}>{item.label}</NavText>
             </NavItem>
           );
@@ -313,7 +378,8 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
           <UserRole>Administrator</UserRole>
         </UserInfo>
         <LogoutButton onClick={handleLogout}>
-          🚪 Logout
+          <LogOut size={18} style={{ marginRight: '8px' }} />
+          Logout
         </LogoutButton>
       </SidebarFooter>
     </SidebarContainer>
