@@ -136,7 +136,7 @@ const TeacherCourseModules = ({
           >
             ← Back to Courses
           </button>
-          <h1 style={{ color: '#2e7d32', fontSize: '2.5rem', marginBottom: '0' }}>
+          <h1 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '2.5rem', marginBottom: '0' }}>
             {selectedCourse?.title} - Modules
           </h1>
         </div>
@@ -177,7 +177,7 @@ const TeacherCourseModules = ({
           marginBottom: '2rem',
           border: '1px solid #e0e0e0'
         }}>
-          <h3 style={{ color: '#2e7d32', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+          <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
             Add New Module
           </h3>
           
@@ -269,7 +269,7 @@ const TeacherCourseModules = ({
                 <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
                   Selected: {moduleFormData.videoFile.name} ({(moduleFormData.videoFile.size / (1024 * 1024)).toFixed(2)} MB)
                   {moduleFormData.duration && (
-                    <span style={{ marginLeft: '1rem', color: '#2e7d32', fontWeight: '500' }}>
+                    <span style={{ marginLeft: '1rem', color: '#667eea', fontWeight: '500' }}>
                       Duration: {moduleFormData.duration}
                     </span>
                   )}
@@ -331,7 +331,7 @@ const TeacherCourseModules = ({
         borderRadius: '8px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       }}>
-        <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem' }}>
           Course Modules ({selectedCourse?.modules?.length || 0})
         </h3>
         
@@ -351,7 +351,7 @@ const TeacherCourseModules = ({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
-                    <h4 style={{ color: '#2e7d32', margin: 0, fontSize: '1.2rem' }}>
+                    <h4 style={{ color: '#667eea', margin: 0, fontSize: '1.2rem' }}>
                       Module {module.order}: {module.title}
                     </h4>
                     <p style={{ color: '#666', marginTop: '0.5rem', fontSize: '0.9rem' }}>
