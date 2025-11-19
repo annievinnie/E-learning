@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import TeacherSidebar from '../components/TeacherSidebar';
 import styled from 'styled-components';
+import { Menu, X } from 'lucide-react';
 import TeacherDashboardOverview from '../components/teacher/TeacherDashboardOverview';
 import TeacherCourses from '../components/teacher/TeacherCourses';
 import TeacherCourseModules from '../components/teacher/TeacherCourseModules';
@@ -15,6 +16,10 @@ const DashboardContainer = styled.div`
 min-height: 100vh;
 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 padding: 2rem;
+
+@media (max-width: 768px) {
+  padding: 1rem;
+}
 `;
 
 const ContentWrapper = styled.div`
@@ -24,6 +29,13 @@ padding: 2.5rem;
 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 margin-left: 280px;
 min-height: calc(100vh - 4rem);
+
+@media (max-width: 768px) {
+  margin-left: 0;
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-top: 70px; /* Space for mobile navbar */
+}
 `;
 
 const LoadingSpinner = styled.div`
@@ -44,11 +56,58 @@ animation: spin 1s linear infinite;
 @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
+const MobileMenuButton = styled.button`
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  @media (max-width: 768px) {
+    display: block;
+  }
+`;
+
+const MobileOverlay = styled.div`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @media (max-width: 768px) {
+    display: ${props => props.$isOpen ? 'block' : 'none'};
+  }
+`;
+
 const TeacherDashboard = () => {
 const navigate = useNavigate();
 const [user, setUser] = useState(null);
 const [loading, setLoading] = useState(true);
 const [activeSection, setActiveSection] = useState('dashboard');
+const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
 // Course management states
 const [courses, setCourses] = useState([]);
@@ -63,6 +122,10 @@ const [editingAssignment, setEditingAssignment] = useState(null);
 const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
 const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
 
+// Student count state
+const [studentCount, setStudentCount] = useState(0);
+const [loadingStudentCount, setLoadingStudentCount] = useState(false);
+
 useEffect(() => {
 const token = localStorage.getItem('token');
 if (!token) {
@@ -76,6 +139,7 @@ API.get('/profile')
 setUser(response.data.user);
 setLoading(false);
 fetchCourses();
+fetchStudentCount();
 })
 .catch(error => {
 console.error('Error fetching profile:', error);
@@ -87,6 +151,7 @@ role: 'teacher'
 });
 setLoading(false);
 fetchCourses();
+fetchStudentCount();
 });
 }, [navigate]);
 
@@ -101,9 +166,40 @@ navigate('/');
 const handleSectionChange = (section) => {
 setActiveSection(section);
 if (section === 'courses') {
-fetchCourses();
+  fetchCourses();
 } else if (section === 'assignments') {
-fetchAssignments();
+  fetchAssignments();
+} else if (section === 'dashboard') {
+  fetchStudentCount();
+}
+};
+
+// Fetch student count
+const fetchStudentCount = async () => {
+setLoadingStudentCount(true);
+try {
+  const response = await API.get('/courses/students/enrolled');
+  if (response.data.success) {
+    // Calculate total unique students across all courses
+    const allStudents = new Set();
+    if (response.data.courses) {
+      response.data.courses.forEach(course => {
+        if (course.students && Array.isArray(course.students)) {
+          course.students.forEach(student => {
+            const studentId = typeof student === 'object' ? student.studentId : student;
+            if (studentId) {
+              allStudents.add(studentId.toString());
+            }
+          });
+        }
+      });
+    }
+    setStudentCount(allStudents.size);
+  }
+} catch (error) {
+  console.error('Error fetching student count:', error);
+} finally {
+  setLoadingStudentCount(false);
 }
 };
 
@@ -149,6 +245,7 @@ const newCourse = response.data.course;
 setCourses(prev => [...prev, newCourse]);
 console.log('✅ Course created:', newCourse);
 alert('Course created successfully!');
+fetchStudentCount(); // Refresh student count
 } else {
 alert(response.data.message || 'Failed to create course.');
 }
@@ -270,6 +367,10 @@ course._id === selectedCourse._id ? updatedCourse : course
 
 console.log('✅ Module created:', updatedCourse);
 alert('Module with video created successfully!');
+// Refresh courses for recent activity if on dashboard
+if (activeSection === 'dashboard') {
+  fetchCourses();
+}
 } else {
 alert(response.data.message || 'Failed to create module.');
 throw new Error(response.data.message);
@@ -353,6 +454,10 @@ const newAssignment = response.data.assignment;
 setAssignments(prev => [...prev, newAssignment]);
 console.log('✅ Assignment created:', newAssignment);
 alert('Assignment created successfully!');
+// Refresh courses to get updated module data for recent activity
+if (activeSection === 'dashboard') {
+  fetchCourses();
+}
 } else {
 alert(response.data.message || 'Failed to create assignment.');
 throw new Error(response.data.message);
@@ -435,7 +540,7 @@ return <LoadingSpinner />;
 const renderContent = () => {
 switch (activeSection) {
 case 'dashboard':
-return <TeacherDashboardOverview user={user} courses={courses} assignments={assignments} />;
+return <TeacherDashboardOverview user={user} courses={courses} assignments={assignments} studentCount={studentCount} />;
 
 case 'courses':
 return (
@@ -481,8 +586,8 @@ editingAssignment={editingAssignment}
 case 'students':
 return <TeacherStudents />;
 
-case 'grades':
-return <TeacherGrades />;
+// case 'grades':
+// return <TeacherGrades />; // Commented out for now
 
 default:
 return <div>Section not found</div>;
@@ -491,11 +596,24 @@ return <div>Section not found</div>;
 
 return (
 <DashboardContainer>
+{/* Mobile Hamburger Menu Button */}
+<MobileMenuButton onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+  {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+</MobileMenuButton>
+
+{/* Mobile Overlay */}
+{isSidebarOpen && <MobileOverlay $isOpen={isSidebarOpen} onClick={() => setIsSidebarOpen(false)} />}
+
 <TeacherSidebar
 activeSection={activeSection}
-onSectionChange={handleSectionChange}
+onSectionChange={(section) => {
+  handleSectionChange(section);
+  setIsSidebarOpen(false); // Close sidebar on mobile when section changes
+}}
 user={user}
 onLogout={handleLogout}
+isOpen={isSidebarOpen}
+onClose={() => setIsSidebarOpen(false)}
 />
 
 <ContentWrapper>

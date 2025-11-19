@@ -11,7 +11,10 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-  color: #2e7d32;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
 `;
@@ -182,10 +185,17 @@ const TeacherStudents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [studentsData, setStudentsData] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchEnrolledStudents();
   }, []);
+  
+  // Reset to page 1 when students data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [studentsData]);
 
   const fetchEnrolledStudents = async () => {
     try {
@@ -248,6 +258,20 @@ const TeacherStudents = () => {
     );
   }
 
+  // Flatten all students from all courses for pagination
+  const allStudents = [];
+  studentsData.courses.forEach((course) => {
+    if (course.students && course.students.length > 0) {
+      course.students.forEach((student) => {
+        allStudents.push({ ...student, courseTitle: course.courseTitle, courseId: course.courseId });
+      });
+    }
+  });
+
+  const totalStudents = allStudents.length;
+  const paginatedStudents = allStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(totalStudents / itemsPerPage);
+
   return (
     <Container>
       <Header>
@@ -265,51 +289,179 @@ const TeacherStudents = () => {
         </StatCard>
       </StatsContainer> */}
 
-      {studentsData.courses.map((course) => (
-        <CourseSection key={course.courseId}>
-          <CourseCard>
-            <CourseHeader>
-              <CourseTitle>{course.courseTitle}</CourseTitle>
-              <StudentCount>{course.studentCount} {course.studentCount === 1 ? 'Student' : 'Students'}</StudentCount>
-            </CourseHeader>
-            {course.students && course.students.length > 0 ? (
-              <StudentsList>
-                {course.students.map((student) => (
-                  <StudentCard key={student.studentId}>
-                    <StudentAvatar $hasImage={!!student.profilePicture}>
-                      {student.profilePicture ? (
-                        <AvatarImage
-                          src={student.profilePicture.startsWith('http') 
-                            ? student.profilePicture 
-                            : `http://localhost:5000${student.profilePicture.startsWith('/') ? '' : '/'}${student.profilePicture}`}
-                          alt={student.studentName}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.textContent = getInitials(student.studentName);
-                          }}
-                        />
-                      ) : (
-                        getInitials(student.studentName)
-                      )}
-                    </StudentAvatar>
-                    <StudentInfo>
-                      <StudentName>{student.studentName}</StudentName>
-                      <StudentEmail>{student.email}</StudentEmail>
-                      <EnrolledDate>Enrolled on {student.enrolledDateFormatted}</EnrolledDate>
-                    </StudentInfo>
-                  </StudentCard>
+      {/* Students Table */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '2rem',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem' }}>
+          My Students ({studentsData.totalUniqueStudents || 0})
+        </h3>
+        
+        {studentsData.courses.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+            <p>No students enrolled in your courses yet.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }} className="table-container">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f5f5f5' }}>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Student</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Email</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Course</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>Enrolled Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedStudents.map((student, index) => (
+                    <tr key={`${student.courseId}-${student.studentId}-${index}`} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: student.profilePicture ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                            overflow: 'hidden',
+                            flexShrink: 0
+                          }}>
+                            {student.profilePicture ? (
+                              <img
+                                src={student.profilePicture.startsWith('http') 
+                                  ? student.profilePicture 
+                                  : `http://localhost:5000${student.profilePicture.startsWith('/') ? '' : '/'}${student.profilePicture}`}
+                                alt={student.studentName}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                  borderRadius: '50%'
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.textContent = getInitials(student.studentName);
+                                }}
+                              />
+                            ) : (
+                              getInitials(student.studentName)
+                            )}
+                          </div>
+                          <div style={{ fontWeight: '500' }}>{student.studentName}</div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem', color: '#666' }}>
+                        {student.email}
+                      </td>
+                      <td style={{ padding: '1rem', color: '#666' }}>
+                        {student.courseTitle}
+                      </td>
+                      <td style={{ padding: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                        {student.enrolledDateFormatted || 'N/A'}
+                      </td>
+                    </tr>
                 ))}
-              </StudentsList>
-            ) : (
-              <StudentsList>
-                <EmptyState style={{ padding: '2rem' }}>
-                  <p>No students enrolled in this course yet.</p>
-                </EmptyState>
-              </StudentsList>
-            )}
-          </CourseCard>
-        </CourseSection>
-      ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {totalStudents > itemsPerPage && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginTop: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px'
+          }}>
+            <div style={{ color: '#666', fontSize: '0.9rem' }}>
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalStudents)} of {totalStudents} students
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: currentPage === 1 ? '#e0e0e0' : '#667eea',
+                  color: currentPage === 1 ? '#999' : 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== 1) {
+                    e.target.style.backgroundColor = '#5a6fd8';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== 1) {
+                    e.target.style.backgroundColor = '#667eea';
+                    e.target.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                Previous
+              </button>
+              <span style={{ 
+                padding: '0.5rem 1rem', 
+                backgroundColor: 'white', 
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#667eea',
+                border: '1px solid #667eea'
+              }}>
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: currentPage === totalPages ? '#e0e0e0' : '#667eea',
+                  color: currentPage === totalPages ? '#999' : 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== totalPages) {
+                    e.target.style.backgroundColor = '#5a6fd8';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== totalPages) {
+                    e.target.style.backgroundColor = '#667eea';
+                    e.target.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </Container>
   );
 };
