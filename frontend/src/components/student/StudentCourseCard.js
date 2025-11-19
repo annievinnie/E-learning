@@ -2,9 +2,19 @@ import React from 'react';
 import { FaStar, FaUsers } from 'react-icons/fa';
 
 const StudentCourseCard = ({ course, onCourseClick }) => {
+  const handleCardClick = () => {
+    onCourseClick(course.id || course._id);
+  };
+
+  const handleButtonClick = (e) => {
+    e.stopPropagation(); // Prevent card click when button is clicked
+    onCourseClick(course.id || course._id);
+  };
+
   return (
     <div 
-      className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 flex flex-col"
+      onClick={handleCardClick}
+      className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 flex flex-col cursor-pointer"
     >
       {/* Course Image */}
       <div className="relative overflow-hidden h-36 bg-gradient-to-br from-indigo-400 to-purple-500 flex-shrink-0">
@@ -37,11 +47,11 @@ const StudentCourseCard = ({ course, onCourseClick }) => {
         <h5 className="text-base font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors duration-300 leading-tight">
           {course.title}
         </h5>
-        
+        <br />
         {/* Description */}
-        <p className="text-gray-600 text-xs mb-3 line-clamp-2 min-h-[2.5rem]">
+        {/* <p className="text-gray-600 text-xs mb-3 line-clamp-2 min-h-[2.5rem]">
           {course.description || 'No description available'}
-        </p>
+        </p> */}
 
         {/* Instructor */}
         <div className="flex items-center mb-3">
@@ -86,7 +96,7 @@ const StudentCourseCard = ({ course, onCourseClick }) => {
             )}
           </div>
           <button
-            onClick={() => onCourseClick(course.id || course._id)}
+            onClick={handleButtonClick}
             className="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 hover:from-indigo-700 hover:to-purple-700 whitespace-nowrap"
           >
             Enroll Now

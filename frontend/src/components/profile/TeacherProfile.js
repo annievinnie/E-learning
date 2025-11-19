@@ -115,7 +115,7 @@ const TeacherProfile = ({ user, onUpdate }) => {
 
       <form onSubmit={handleSubmit} style={{ maxWidth: '900px' }}>
         {/* Basic Information */}
-        <h3 style={{ color: '#2e7d32', marginBottom: '1rem', marginTop: '2rem', borderBottom: '2px solid #2e7d32', paddingBottom: '0.5rem' }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem', marginTop: '2rem', borderBottom: '3px solid', borderImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1', paddingBottom: '0.5rem' }}>
           Basic Information
         </h3>
 
@@ -271,7 +271,7 @@ const TeacherProfile = ({ user, onUpdate }) => {
         </div>
 
         {/* Address Information */}
-        <h3 style={{ color: '#2e7d32', marginBottom: '1rem', marginTop: '2rem', borderBottom: '2px solid #2e7d32', paddingBottom: '0.5rem' }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem', marginTop: '2rem', borderBottom: '3px solid', borderImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1', paddingBottom: '0.5rem' }}>
           Address Information
         </h3>
 
@@ -379,7 +379,7 @@ const TeacherProfile = ({ user, onUpdate }) => {
         </div>
 
         {/* Teaching Information */}
-        <h3 style={{ color: '#2e7d32', marginBottom: '1rem', marginTop: '2rem', borderBottom: '2px solid #2e7d32', paddingBottom: '0.5rem' }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem', marginTop: '2rem', borderBottom: '3px solid', borderImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1', paddingBottom: '0.5rem' }}>
           Teaching Information
         </h3>
 

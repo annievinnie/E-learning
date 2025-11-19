@@ -1,17 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { Briefcase, GraduationCap, User } from 'lucide-react';
 
 const HomePage = () => {
   const navigate = useNavigate();
 
-  const handleGetStarted = () => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
+  const isStudentLoggedIn = token && role === 'student';
     
+  const handleGetStarted = () => {
     // If student is logged in, go to student dashboard
-    if (token && role === 'student') {
+    if (isStudentLoggedIn) {
       navigate('/StudentDashboard');
     } else {
       // Otherwise, go to login page
@@ -37,9 +39,11 @@ const HomePage = () => {
             <PrimaryButton onClick={handleGetStarted}>
               Get Started
             </PrimaryButton>
+            {!isStudentLoggedIn && (
             <SecondaryButton onClick={handleSignUp}>
               Sign Up
             </SecondaryButton>
+            )}
           </ButtonGroup>
         </HeroContent>
         <HeroImage>
@@ -66,7 +70,9 @@ const HomePage = () => {
         <SectionTitle>Why Choose E-Learning Platform?</SectionTitle>
         <FeaturesGrid>
           <FeatureCard>
-            <FeatureIcon>👨‍💼</FeatureIcon>
+            <FeatureIcon>
+              <Briefcase size={48} />
+            </FeatureIcon>
             <FeatureTitle>Admin Dashboard</FeatureTitle>
             <FeatureDescription>
               Comprehensive system management with user statistics, course oversight, and administrative controls.
@@ -74,7 +80,9 @@ const HomePage = () => {
           </FeatureCard>
           
           <FeatureCard>
-            <FeatureIcon>👨‍🏫</FeatureIcon>
+            <FeatureIcon>
+              <GraduationCap size={48} />
+            </FeatureIcon>
             <FeatureTitle>Teacher Tools</FeatureTitle>
             <FeatureDescription>
               Create courses, manage students, grade assignments, and track student progress with powerful teaching tools.
@@ -82,7 +90,9 @@ const HomePage = () => {
           </FeatureCard>
           
           <FeatureCard>
-            <FeatureIcon>👨‍🎓</FeatureIcon>
+            <FeatureIcon>
+              <User size={48} />
+            </FeatureIcon>
             <FeatureTitle>Student Experience</FeatureTitle>
             <FeatureDescription>
               Access courses, submit assignments, view grades, and download materials in an intuitive interface.
@@ -243,9 +253,9 @@ const PrimaryButton = styled.button`
   background: #ff6b6b;
   color: white;
   border: none;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -260,9 +270,9 @@ const SecondaryButton = styled.button`
   background: transparent;
   color: white;
   border: 2px solid white;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -327,8 +337,17 @@ const FeatureCard = styled.div`
 `;
 
 const FeatureIcon = styled.div`
-  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1rem;
+  color: #667eea;
+  transition: transform 0.3s ease, color 0.3s ease;
+
+  ${FeatureCard}:hover & {
+    transform: scale(1.1);
+    color: #764ba2;
+  }
 `;
 
 const FeatureTitle = styled.h3`
@@ -394,9 +413,9 @@ const CTAButton = styled.button`
   background: #ff6b6b;
   color: white;
   border: none;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -513,9 +532,9 @@ const TeacherApplicationButton = styled.button`
   background: #ff6b6b;
   color: white;
   border: none;
-  padding: 1rem 2.5rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -532,4 +551,5 @@ const FooterBottom = styled.div`
   border-top: 1px solid #444;
   padding-top: 1rem;
   opacity: 0.6;
+  text-align: center;
 `;

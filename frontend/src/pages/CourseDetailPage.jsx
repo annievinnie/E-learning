@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Play,
@@ -28,44 +28,7 @@ const CourseDetailPage = () => {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [downloadableFilesCount, setDownloadableFilesCount] = useState(0);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    fetchCourseDetails();
-  }, [id]);
-
-  // Fetch assignments to count downloadable files
-  useEffect(() => {
-    if (id) {
-      fetchAssignmentsCount();
-    }
-  }, [id]);
-
-
-  // Refresh enrollment status when component becomes visible (e.g., returning from payment)
-  useEffect(() => {
-    const handleFocus = () => {
-      // Refresh course details when window regains focus (user returns from Stripe)
-      if (document.visibilityState === 'visible') {
-        fetchCourseDetails();
-      }
-    };
-
-    // Check if we're returning from payment success page
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('enrolled') === 'true') {
-      fetchCourseDetails();
-    }
-
-    document.addEventListener('visibilitychange', handleFocus);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleFocus);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [id]);
-
-  const fetchCourseDetails = async () => {
+  const fetchCourseDetails = useCallback(async () => {
     try {
       const response = await API.get(`/student/courses/${id}`);
       if (response.data.success) {
@@ -107,9 +70,9 @@ const CourseDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchAssignmentsCount = async () => {
+  const fetchAssignmentsCount = useCallback(async () => {
     try {
       const response = await API.get(`/student/courses/${id}/assignments`);
       if (response.data.success) {
@@ -124,7 +87,44 @@ const CourseDetailPage = () => {
       console.error('Error fetching assignments count:', error);
       setDownloadableFilesCount(0);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    fetchCourseDetails();
+  }, [id, fetchCourseDetails]);
+
+  // Fetch assignments to count downloadable files
+  useEffect(() => {
+    if (id) {
+      fetchAssignmentsCount();
+    }
+  }, [id, fetchAssignmentsCount]);
+
+
+  // Refresh enrollment status when component becomes visible (e.g., returning from payment)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh course details when window regains focus (user returns from Stripe)
+      if (document.visibilityState === 'visible') {
+        fetchCourseDetails();
+      }
+    };
+
+    // Check if we're returning from payment success page
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('enrolled') === 'true') {
+      fetchCourseDetails();
+    }
+
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [id, fetchCourseDetails]);
 
   const handleEnrollClick = async () => {
     if (enrolling || isEnrolled) return;

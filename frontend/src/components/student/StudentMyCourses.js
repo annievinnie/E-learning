@@ -11,6 +11,29 @@ const StudentMyCourses = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   const [studentName, setStudentName] = useState('');
+  const [visibleCoursesCount, setVisibleCoursesCount] = useState(6); // Show 2 rows initially (3 columns x 2 rows = 6)
+  const [cardsPerRow, setCardsPerRow] = useState(3);
+
+  // Calculate cards per row based on screen size
+  useEffect(() => {
+    const calculateCardsPerRow = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) return 3; // lg: 3 columns
+      if (width >= 768) return 2;  // md: 2 columns
+      return 1; // sm: 1 column
+    };
+
+    const updateCardsPerRow = () => {
+      const newCardsPerRow = calculateCardsPerRow();
+      setCardsPerRow(newCardsPerRow);
+      // Reset visible count to 2 rows when screen size changes
+      setVisibleCoursesCount(newCardsPerRow * 2);
+    };
+
+    updateCardsPerRow();
+    window.addEventListener('resize', updateCardsPerRow);
+    return () => window.removeEventListener('resize', updateCardsPerRow);
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -36,6 +59,10 @@ const StudentMyCourses = () => {
     };
   }, []);
 
+  const handleViewMore = () => {
+    setVisibleCoursesCount(prev => prev + cardsPerRow); // Add one more row
+  };
+
   const fetchEnrolledCourses = async () => {
     try {
       const response = await API.get('/student/enrolled');
@@ -58,6 +85,13 @@ const StudentMyCourses = () => {
   };
 
   const handleCourseClick = (courseId, progress) => {
+    // Safety check for progress object
+    if (!progress || typeof progress !== 'object') {
+      // If progress is not available, just navigate to course
+      navigate(`/course/${courseId}`);
+      return;
+    }
+    
     // If course is 100% complete, show certificate instead of navigating
     if (progress.progressPercentage === 100) {
       const course = courses.find(c => (c._id || c.id) === courseId);
@@ -140,8 +174,9 @@ const StudentMyCourses = () => {
 
         {/* Courses Grid */}
         {!loading && courses.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course) => {
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.slice(0, visibleCoursesCount).map((course) => {
               const enrollmentDate = getEnrollmentDate(course);
               const instructorImage = course.teacher?.profilePicture 
                 ? (course.teacher.profilePicture.startsWith('http') 
@@ -160,7 +195,7 @@ const StudentMyCourses = () => {
                 <div
                   key={course._id || course.id}
                   className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 flex flex-col cursor-pointer"
-                  onClick={() => handleCourseClick(course._id || course.id)}
+                  onClick={() => handleCourseClick(course._id || course.id, progress)}
                 >
                   {/* Course Thumbnail */}
                   <div className="relative overflow-hidden h-48 bg-gradient-to-br from-indigo-400 to-purple-500 flex-shrink-0">
@@ -290,6 +325,17 @@ const StudentMyCourses = () => {
               );
             })}
           </div>
+          {courses.length > visibleCoursesCount && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={handleViewMore}
+                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                View More
+              </button>
+            </div>
+          )}
+          </>
         )}
 
         {/* Empty State */}

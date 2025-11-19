@@ -170,9 +170,9 @@ export default function LoginPage() {
           }
         `}
       </style>
-      <div style={styles.container}>
+      <div style={styles.container} className="login-container">
         {/* Left Form Section */}
-        <div style={styles.formSection}>
+        <div style={styles.formSection} className="login-form-section">
           <div style={styles.formBox}>
             <h2 style={{ color: '#1a237e', marginBottom: '8px' }}>Login</h2>
             <p style={{ color: '#757575', marginBottom: '20px' }}>
@@ -277,7 +277,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right Image Section - replacing the text */}
-        <div style={styles.backgroundSection}>
+        <div style={styles.backgroundSection} className="login-background-section">
           <img
             src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=800&fit=crop&q=80"
             alt="E-Learning Management System"
