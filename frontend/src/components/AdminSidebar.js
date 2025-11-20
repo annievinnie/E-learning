@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { LogOut, GraduationCap, LayoutDashboard, Users, UserCog, BookOpen, DollarSign, X, User } from 'lucide-react';
+import { LogOut, GraduationCap, LayoutDashboard, Users, UserCog, BookOpen, DollarSign, ShoppingBag, X, User } from 'lucide-react';
 
 // Styled Components
 const SidebarContainer = styled.div`
@@ -283,6 +283,7 @@ const iconMap = {
   teachers: UserCog,
   courses: BookOpen,
   payments: DollarSign,
+  merchandise: ShoppingBag,
   profile: User,
 };
 
@@ -296,6 +297,7 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout, isOpen =
     { id: 'teachers', label: 'Teachers', iconKey: 'teachers' },
     { id: 'courses', label: 'Courses', iconKey: 'courses' },
     { id: 'payments', label: 'Payments', iconKey: 'payments' },
+    { id: 'merchandise', label: 'Merchandise', iconKey: 'merchandise' },
     { id: 'profile', label: 'Profile', iconKey: 'profile' },
   ];
 

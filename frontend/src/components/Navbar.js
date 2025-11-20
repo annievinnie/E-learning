@@ -209,15 +209,26 @@ const Navbar = () => {
                 Dashboard
               </NavLink>
               {user?.role === 'student' && (
-                <NavLink 
-                  onClick={() => {
-                    navigate('/my-courses');
-                    setIsMenuOpen(false);
-                  }} 
-                  $active={location.pathname === '/my-courses'}
-                >
-                  My Courses
-                </NavLink>
+                <>
+                  <NavLink 
+                    onClick={() => {
+                      navigate('/my-courses');
+                      setIsMenuOpen(false);
+                    }} 
+                    $active={location.pathname === '/my-courses'}
+                  >
+                    My Courses
+                  </NavLink>
+                  <NavLink 
+                    onClick={() => {
+                      navigate('/merch');
+                      setIsMenuOpen(false);
+                    }} 
+                    $active={location.pathname === '/merch'}
+                  >
+                    Merch
+                  </NavLink>
+                </>
               )}
             </>
           )}
