@@ -23,7 +23,9 @@ import {
   deleteStudent,
   getAllCourses,
   deleteCourseAdmin,
-  getTeacherRevenue
+  getTeacherRevenue,
+  getMyTeacherRevenue,
+  getAllPayments
 } from "../controllers/userController.js";
 import { uploadProfilePicture as uploadProfilePictureMiddleware } from "../middleware/profilePictureUploadMiddleware.js";
 import bcrypt from "bcrypt";
@@ -94,7 +96,10 @@ router.put("/admin/students/:studentId", verifyToken, updateStudent);
 router.delete("/admin/students/:studentId", verifyToken, deleteStudent);
 router.get("/admin/courses", verifyToken, getAllCourses);
 router.delete("/admin/courses/:courseId", verifyToken, deleteCourseAdmin);
+// Order matters: more specific routes first
+router.get("/admin/payments/all", verifyToken, getAllPayments);
 router.get("/admin/payments/teachers", verifyToken, getTeacherRevenue);
+router.get("/teacher/payments", verifyToken, getMyTeacherRevenue);
 //router.post("/admin/teachers/:teacherId/set-password", verifyToken, verifyAdmin, setTeacherPassword);
 
 export default router;
