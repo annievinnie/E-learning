@@ -10,6 +10,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import assignmentRoutes from "./routes/assignmentRoutes.js";
 import merchandiseRoutes from "./routes/merchandiseRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 import { setupFileLogging } from "./utils/logger.js";
 
 dotenv.config({ quiet: true });
@@ -104,6 +105,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/merchandise", merchandiseRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Start server after database connection
 const startServer = async () => {

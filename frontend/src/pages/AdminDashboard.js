@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Menu, X } from 'lucide-react';
@@ -10,6 +10,7 @@ import AdminTeachers from '../components/admin/AdminTeachers';
 import AdminCourses from '../components/admin/AdminCourses';
 import AdminAllPayments from '../components/admin/AdminAllPayments';
 import AdminMerchandise from '../components/admin/AdminMerchandise';
+import AdminContactUs from '../components/admin/AdminContactUs';
 import AdminProfile from '../components/profile/AdminProfile';
 
 const AdminDashboard = () => {
@@ -65,6 +66,8 @@ const AdminDashboard = () => {
   const [teacherRevenue, setTeacherRevenue] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [selectedTeacherForRevenue, setSelectedTeacherForRevenue] = useState(null); // For showing teacher revenue details
+  const [unreadContactCount, setUnreadContactCount] = useState(0);
+  const [recentUnreadContacts, setRecentUnreadContacts] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -80,6 +83,7 @@ const AdminDashboard = () => {
         if (response.data.user.role === 'admin') {
           fetchPendingApplications();
           fetchDashboardStats();
+          fetchUnreadContactCount();
         }
         setLoading(false);
       })
@@ -91,18 +95,32 @@ const AdminDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
+  // Fetch admin data when user is loaded
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      fetchPendingApplications();
+      fetchDashboardStats();
+      fetchUnreadContactCount();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
+
   // Auto-refresh pending applications every 30 seconds
   useEffect(() => {
     if (user?.role === 'admin') {
-      fetchPendingApplications(); // Fetch immediately
       const interval = setInterval(() => {
         fetchPendingApplications();
+        fetchUnreadContactCount();
+        // If notifications are open, refresh recent contacts too
+        if (showNotifications) {
+          fetchRecentUnreadContacts();
+        }
       }, 30000); // Check every 30 seconds
 
       return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.role, showNotifications]);
 
   // Track new applications
   useEffect(() => {
@@ -173,6 +191,28 @@ const AdminDashboard = () => {
       console.error('Error fetching dashboard stats:', error);
     }
   };
+
+  const fetchUnreadContactCount = useCallback(async () => {
+    try {
+      const response = await API.get('/contact/admin/unread-count');
+      if (response.data.success) {
+        setUnreadContactCount(response.data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread contact count:', error);
+    }
+  }, []);
+
+  const fetchRecentUnreadContacts = useCallback(async () => {
+    try {
+      const response = await API.get('/contact/admin/recent-unread?limit=5');
+      if (response.data.success) {
+        setRecentUnreadContacts(response.data.contacts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recent unread contacts:', error);
+    }
+  }, []);
 
   const fetchStudents = async () => {
     setLoadingStudents(true);
@@ -1188,6 +1228,9 @@ const AdminDashboard = () => {
       case 'merchandise':
         return <AdminMerchandise />;
 
+      case 'contact':
+        return <AdminContactUs />;
+
       case 'profile':
         return (
           <AdminProfile
@@ -1229,11 +1272,15 @@ const AdminDashboard = () => {
         onSectionChange={(section) => {
           handleSectionChange(section);
           setIsSidebarOpen(false); // Close sidebar on mobile when section changes
+          if (section === 'contact') {
+            fetchUnreadContactCount(); // Refresh count when viewing contact section
+          }
         }}
         user={user}
         onLogout={handleLogout}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        unreadContactCount={unreadContactCount}
       />
 
       {/* Main Content */}
@@ -1241,18 +1288,24 @@ const AdminDashboard = () => {
         {/* Notification Bell */}
         <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }} data-notification-container>
           <NotificationBell 
-            hasNew={newApplicationsCount > 0}
+            hasNew={newApplicationsCount > 0 || unreadContactCount > 0}
             onClick={() => {
               setShowNotifications(!showNotifications);
+              if (showNotifications === false) {
+                // Fetch recent unread contacts when opening notifications
+                fetchRecentUnreadContacts();
+              }
               if (newApplicationsCount > 0) {
                 setNewApplicationsCount(0); // Mark as read
               }
             }}
           >
             <span style={{ fontSize: '1.5rem' }}>🔔</span>
-            {pendingApplications.length > 0 && (
+            {(pendingApplications.length > 0 || unreadContactCount > 0) && (
               <NotificationBadge>
-                {pendingApplications.length > 99 ? '99+' : pendingApplications.length}
+                {pendingApplications.length + unreadContactCount > 99 
+                  ? '99+' 
+                  : pendingApplications.length + unreadContactCount}
               </NotificationBadge>
             )}
           </NotificationBell>
@@ -1262,9 +1315,9 @@ const AdminDashboard = () => {
             <NotificationDropdown data-notification-container>
               <NotificationHeader>
                 <div>
-                  <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Teacher Applications</div>
+                  <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Notifications</div>
                   <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-                    {pendingApplications.length} pending application{pendingApplications.length !== 1 ? 's' : ''}
+                    {pendingApplications.length + unreadContactCount} new item{pendingApplications.length + unreadContactCount !== 1 ? 's' : ''}
                   </div>
                 </div>
                 <Button 
@@ -1276,75 +1329,190 @@ const AdminDashboard = () => {
                   ✕
                 </Button>
               </NotificationHeader>
-              
-              {pendingApplications.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-                  No pending applications
-                </div>
-              ) : (
-                pendingApplications
-                  .sort((a, b) => new Date(b.createdAt || b.appliedAt) - new Date(a.createdAt || a.appliedAt))
-                  .slice(0, 5)
-                  .map((application) => {
-                    const createdAt = new Date(application.createdAt || application.appliedAt);
-                    const now = new Date();
-                    const hoursAgo = (now - createdAt) / (1000 * 60 * 60);
-                    const isNew = hoursAgo < 24;
 
-                    return (
-                      <NotificationItem 
-                        key={application._id} 
-                        isNew={isNew}
+              {/* Teacher Applications Section */}
+              {pendingApplications.length > 0 && (
+                <>
+                  <div style={{ 
+                    padding: '0.75rem 1rem', 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    borderBottom: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    Teacher Applications ({pendingApplications.length})
+                  </div>
+                  {pendingApplications
+                    .sort((a, b) => new Date(b.createdAt || b.appliedAt) - new Date(a.createdAt || a.appliedAt))
+                    .slice(0, 3)
+                    .map((application) => {
+                      const createdAt = new Date(application.createdAt || application.appliedAt);
+                      const now = new Date();
+                      const hoursAgo = (now - createdAt) / (1000 * 60 * 60);
+                      const isNew = hoursAgo < 24;
+
+                      return (
+                        <NotificationItem 
+                          key={application._id} 
+                          isNew={isNew}
+                          onClick={() => {
+                            setActiveSection('teachers');
+                            setTeacherFilter('pending');
+                            setShowNotifications(false);
+                          }}
+                        >
+                          <NotificationTitle>
+                            {application.fullName}
+                            {isNew && <NewBadge>NEW</NewBadge>}
+                          </NotificationTitle>
+                          <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>
+                            {application.email}
+                          </div>
+                          {application.coursesKnown && application.coursesKnown.length > 0 && (
+                            <div style={{ fontSize: '0.8rem', color: '#999', marginBottom: '0.25rem' }}>
+                              Courses: {application.coursesKnown.slice(0, 3).join(', ')}
+                              {application.coursesKnown.length > 3 && '...'}
+                            </div>
+                          )}
+                          <NotificationTime>
+                            {hoursAgo < 1 
+                              ? `${Math.floor(hoursAgo * 60)} minutes ago`
+                              : hoursAgo < 24 
+                              ? `${Math.floor(hoursAgo)} hours ago`
+                              : `${Math.floor(hoursAgo / 24)} days ago`
+                            }
+                          </NotificationTime>
+                        </NotificationItem>
+                      );
+                    })}
+                  {pendingApplications.length > 3 && (
+                    <div style={{ 
+                      padding: '0.5rem 1rem', 
+                      textAlign: 'center', 
+                      borderTop: '1px solid #f0f0f0',
+                      background: '#f8f9fa'
+                    }}>
+                      <Button 
+                        variant="primary" 
+                        size="small"
                         onClick={() => {
                           setActiveSection('teachers');
                           setTeacherFilter('pending');
                           setShowNotifications(false);
                         }}
+                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
                       >
-                        <NotificationTitle>
-                          {application.fullName}
-                          {isNew && <NewBadge>NEW</NewBadge>}
-                        </NotificationTitle>
-                        <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>
-                          {application.email}
-                        </div>
-                        {application.coursesKnown && application.coursesKnown.length > 0 && (
-                          <div style={{ fontSize: '0.8rem', color: '#999', marginBottom: '0.25rem' }}>
-                            Courses: {application.coursesKnown.slice(0, 3).join(', ')}
-                            {application.coursesKnown.length > 3 && '...'}
-                          </div>
-                        )}
-                        <NotificationTime>
-                          {hoursAgo < 1 
-                            ? `${Math.floor(hoursAgo * 60)} minutes ago`
-                            : hoursAgo < 24 
-                            ? `${Math.floor(hoursAgo)} hours ago`
-                            : `${Math.floor(hoursAgo / 24)} days ago`
-                          }
-                        </NotificationTime>
-                      </NotificationItem>
-                    );
-                  })
+                        View All ({pendingApplications.length})
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
-              
-              {pendingApplications.length > 5 && (
-                <div style={{ 
-                  padding: '1rem', 
-                  textAlign: 'center', 
-                  borderTop: '1px solid #f0f0f0',
-                  background: '#f8f9fa'
-                }}>
-                  <Button 
-                    variant="primary" 
-                    size="small"
-                    onClick={() => {
-                      setActiveSection('teachers');
-                      setTeacherFilter('pending');
-                      setShowNotifications(false);
-                    }}
-                  >
-                    View All {pendingApplications.length} Applications
-                  </Button>
+
+              {/* Contact Us Section */}
+              {unreadContactCount > 0 && (
+                <>
+                  {pendingApplications.length > 0 && (
+                    <div style={{ 
+                      height: '1px', 
+                      background: '#e0e0e0', 
+                      margin: '0.5rem 0' 
+                    }} />
+                  )}
+                  <div style={{ 
+                    padding: '0.75rem 1rem', 
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    borderBottom: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    Contact Us ({unreadContactCount})
+                  </div>
+                  {recentUnreadContacts.length === 0 ? (
+                    <div style={{ padding: '1rem', textAlign: 'center', color: '#999', fontSize: '0.85rem' }}>
+                      Loading...
+                    </div>
+                  ) : (
+                    recentUnreadContacts.slice(0, 3).map((contact) => {
+                      const createdAt = new Date(contact.createdAt);
+                      const now = new Date();
+                      const hoursAgo = (now - createdAt) / (1000 * 60 * 60);
+                      const isNew = hoursAgo < 24;
+
+                      return (
+                        <NotificationItem 
+                          key={contact._id} 
+                          isNew={isNew}
+                          onClick={() => {
+                            setActiveSection('contact');
+                            setShowNotifications(false);
+                            fetchUnreadContactCount();
+                          }}
+                        >
+                          <NotificationTitle>
+                            {contact.fullName}
+                            {isNew && <NewBadge>NEW</NewBadge>}
+                          </NotificationTitle>
+                          <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.25rem' }}>
+                            {contact.email}
+                            <span style={{ 
+                              marginLeft: '0.5rem', 
+                              padding: '0.2rem 0.4rem', 
+                              background: contact.userRole === 'student' ? '#e3f2fd' : contact.userRole === 'teacher' ? '#f3e5f5' : '#f5f5f5',
+                              color: contact.userRole === 'student' ? '#1976d2' : contact.userRole === 'teacher' ? '#7b1fa2' : '#616161',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500'
+                            }}>
+                              {contact.userRole || 'Guest'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#999', marginBottom: '0.25rem' }}>
+                            {contact.message.length > 50 ? contact.message.substring(0, 50) + '...' : contact.message}
+                          </div>
+                          <NotificationTime>
+                            {hoursAgo < 1 
+                              ? `${Math.floor(hoursAgo * 60)} minutes ago`
+                              : hoursAgo < 24 
+                              ? `${Math.floor(hoursAgo)} hours ago`
+                              : `${Math.floor(hoursAgo / 24)} days ago`
+                            }
+                          </NotificationTime>
+                        </NotificationItem>
+                      );
+                    })
+                  )}
+                  {unreadContactCount > 3 && (
+                    <div style={{ 
+                      padding: '0.5rem 1rem', 
+                      textAlign: 'center', 
+                      borderTop: '1px solid #f0f0f0',
+                      background: '#f8f9fa'
+                    }}>
+                      <Button 
+                        variant="primary" 
+                        size="small"
+                        onClick={() => {
+                          setActiveSection('contact');
+                          setShowNotifications(false);
+                          fetchUnreadContactCount();
+                        }}
+                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                      >
+                        View All ({unreadContactCount})
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Empty State */}
+              {pendingApplications.length === 0 && unreadContactCount === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔔</div>
+                  <div>No new notifications</div>
                 </div>
               )}
             </NotificationDropdown>

@@ -234,12 +234,52 @@ const EmptyState = styled.div`
   color: #999;
 `;
 
+const FilterSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`;
+
+const FilterLabel = styled.label`
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+`;
+
+const CategorySelect = styled.select`
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #333;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+
+  &:hover {
+    border-color: #667eea;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+`;
+
 const StudentMerch = () => {
   const [merchandise, setMerchandise] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
     fetchMerchandise();
@@ -357,18 +397,50 @@ const StudentMerch = () => {
     return `http://localhost:5000${image}`;
   };
 
+  // Filter merchandise by category
+  const filteredMerchandise = merchandise.filter((item) => {
+    if (selectedCategory === 'all') return true;
+    const itemCategory = (item.category || 'General').trim();
+    return itemCategory.toLowerCase() === selectedCategory.toLowerCase();
+  });
+
+  // Get unique categories from merchandise
+  const categories = ['all', ...new Set(merchandise.map(item => (item.category || 'General').trim()))];
+
   return (
     <Container>
       <PageTitle>E-Learning Merchandise</PageTitle>
       <PageSubtitle>Shop our exclusive collection of E-Learning branded items!</PageSubtitle>
 
+      {/* Category Filter */}
+      {!loading && merchandise.length > 0 && (
+        <FilterSection>
+          <FilterLabel>Category:</FilterLabel>
+          <CategorySelect
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="all">All Categories</option>
+            <option value="General">General</option>
+            <option value="Apparel">Apparel</option>
+            <option value="Accessories">Accessories</option>
+            <option value="Books">Books</option>
+            <option value="Electronics">Electronics</option>
+          </CategorySelect>
+        </FilterSection>
+      )}
+
       {loading ? (
         <EmptyState>Loading merchandise...</EmptyState>
-      ) : merchandise.length === 0 ? (
-        <EmptyState>No merchandise available at the moment. Check back soon!</EmptyState>
+      ) : filteredMerchandise.length === 0 ? (
+        <EmptyState>
+          {selectedCategory === 'all' 
+            ? 'No merchandise available at the moment. Check back soon!'
+            : `No merchandise found in "${selectedCategory}" category.`}
+        </EmptyState>
       ) : (
         <MerchandiseGrid>
-          {merchandise.map((item) => {
+          {filteredMerchandise.map((item) => {
             const inCart = cart.find(cartItem => cartItem._id === item._id);
             const inStock = item.stock > 0;
             

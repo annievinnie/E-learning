@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { LogOut, GraduationCap, LayoutDashboard, Users, UserCog, BookOpen, DollarSign, ShoppingBag, X, User } from 'lucide-react';
+import { LogOut, GraduationCap, LayoutDashboard, Users, UserCog, BookOpen, DollarSign, ShoppingBag, X, User, MessageSquare } from 'lucide-react';
 
 // Styled Components
 const SidebarContainer = styled.div`
@@ -182,6 +182,25 @@ const NavText = styled.span`
   font-weight: ${props => props.active ? '600' : '500'};
   letter-spacing: 0.3px;
   transition: font-weight 0.3s ease;
+  flex: 1;
+`;
+
+const NotificationBadge = styled.span`
+  background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
 `;
 
 const SidebarFooter = styled.div`
@@ -284,11 +303,12 @@ const iconMap = {
   courses: BookOpen,
   payments: DollarSign,
   merchandise: ShoppingBag,
+  contact: MessageSquare,
   profile: User,
 };
 
 // ------------------ Sidebar Component ------------------
-const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout, isOpen = false, onClose }) => {
+const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout, isOpen = false, onClose, unreadContactCount = 0 }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
 
   const navItems = [
@@ -298,6 +318,7 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout, isOpen =
     { id: 'courses', label: 'Courses', iconKey: 'courses' },
     { id: 'payments', label: 'Payments', iconKey: 'payments' },
     { id: 'merchandise', label: 'Merchandise', iconKey: 'merchandise' },
+    { id: 'contact', label: 'Contact Us', iconKey: 'contact' },
     { id: 'profile', label: 'Profile', iconKey: 'profile' },
   ];
 
@@ -370,6 +391,9 @@ const AdminSidebar = ({ activeSection, onSectionChange, user, onLogout, isOpen =
                 {React.createElement(iconMap[item.iconKey], { size: 20 })}
               </NavIcon>
               <NavText active={isActive}>{item.label}</NavText>
+              {item.id === 'contact' && unreadContactCount > 0 && (
+                <NotificationBadge>{unreadContactCount > 99 ? '99+' : unreadContactCount}</NotificationBadge>
+              )}
             </NavItem>
           );
         })}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import API from '../api';
 
 // ------------------ Inline Styles ------------------
 const styles = {
@@ -196,12 +197,16 @@ export default function ContactUsPage() {
     setSuccess('');
 
     try {
-      // For now, just simulate a successful submission
-      // In the future, this would make an API call to your backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Send contact form data to backend
+      const response = await API.post('/contact/submit', {
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        message: formData.message.trim(),
+      });
       
+      if (response.data.success) {
       console.log('Contact form submitted successfully');
-      setSuccess('Thank you for your message! We will get back to you soon.');
+        setSuccess(response.data.message || 'Thank you for your message! We will get back to you soon.');
       setIsErrorPopup(false);
       setShowPopup(true);
       
@@ -211,10 +216,14 @@ export default function ContactUsPage() {
         email: '',
         message: ''
       });
+      } else {
+        throw new Error(response.data.message || 'Failed to send message');
+      }
       
     } catch (err) {
       console.error('Contact form error:', err);
-      setError('Failed to send message. Please try again.');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to send message. Please try again.';
+      setError(errorMessage);
       setIsErrorPopup(true);
       setShowPopup(true);
     } finally {

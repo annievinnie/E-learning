@@ -24,6 +24,9 @@ const AdminMerchandise = () => {
     fetchMerchandise();
   }, []);
 
+  // Ensure form doesn't auto-close - only closes on user action or successful edit
+  // No timeout or auto-close logic here
+
   const fetchMerchandise = async () => {
     setLoading(true);
     try {
@@ -103,26 +106,28 @@ const AdminMerchandise = () => {
       }
 
       if (response.data.success) {
-        setMessage({ type: 'success', text: editingItem ? 'Merchandise updated successfully!' : 'Merchandise created successfully!' });
+        const successMessage = editingItem ? 'Merchandise updated successfully!' : 'Merchandise created successfully!';
+        setMessage({ type: 'success', text: successMessage });
         fetchMerchandise();
         
-        // Reset form but keep it open for adding more items
-        setFormData({
-          name: '',
-          description: '',
-          price: '',
-          stock: '',
-          category: 'General',
-          isActive: true,
-          image: ''
-        });
-        setImageFile(null);
-        setEditingItem(null);
-        setErrors({});
-        
-        // Only close form if editing, keep open if creating new
+        // If editing, close the form after successful update
         if (editingItem) {
           setShowForm(false);
+          setEditingItem(null);
+        } else {
+          // If creating new, reset form but keep it open for adding more items
+          setFormData({
+            name: '',
+            description: '',
+            price: '',
+            stock: '',
+            category: 'General',
+            isActive: true,
+            image: ''
+          });
+          setImageFile(null);
+          setErrors({});
+          // Form stays open so admin can add more items
         }
       } else {
         setMessage({ 
@@ -230,9 +235,26 @@ const AdminMerchandise = () => {
           borderRadius: '4px',
           backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da',
           color: message.type === 'success' ? '#155724' : '#721c24',
-          border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
+          border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          {message.text}
+          <span>{message.text}</span>
+          <button
+            onClick={() => setMessage({ type: '', text: '' })}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: message.type === 'success' ? '#155724' : '#721c24',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+              padding: '0 0.5rem',
+              fontWeight: 'bold'
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
 
