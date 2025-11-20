@@ -9,8 +9,13 @@ import studentRoutes from "./routes/studentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import assignmentRoutes from "./routes/assignmentRoutes.js";
+import merchandiseRoutes from "./routes/merchandiseRoutes.js";
+import { setupFileLogging } from "./utils/logger.js";
 
 dotenv.config({ quiet: true });
+
+// Setup file-based logging (replaces console methods)
+setupFileLogging();
 
 // Check for required environment variables on startup
 const requiredEnvVars = {
@@ -98,6 +103,7 @@ app.use("/api/student", studentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/assignments", assignmentRoutes);
+app.use("/api/merchandise", merchandiseRoutes);
 
 // Start server after database connection
 const startServer = async () => {
