@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import API from "../api";
 import CoursesListPage from "./CourseListPage";
 import Footer from "../components/Footer";
+import ImageSlider from "../components/student/ImageSlider";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -41,10 +42,32 @@ const StudentDashboard = () => {
     );
   }
 
+  // Static slider images - add your images to public/images/sliders/
+  // The slider will automatically rotate through all images every 3 seconds
+  const sliderImages = [
+    '/images/sliders/slider1.jpg',
+    '/images/sliders/slider2.jpg',
+    '/images/sliders/slider3.jpg',
+    '/images/sliders/slider4.jpg',
+    // Add more images here if you want (e.g., '/images/sliders/slider5.jpg')
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-indigo-50 flex flex-col">
       {/* Main Section */}
       <main className="flex-grow-1">
+        {/* Picture Slider Section */}
+        <div className="w-full px-4 py-8">
+          <div className="max-w-7xl mx-auto mb-8">
+            <ImageSlider
+              images={sliderImages}
+              title=""
+              autoPlayInterval={3000}
+              height="600px"
+            />
+          </div>
+        </div>
+
         <CoursesListPage />
       </main>
       
