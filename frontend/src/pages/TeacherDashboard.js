@@ -10,6 +10,8 @@ import TeacherCourseModules from '../components/teacher/TeacherCourseModules';
 import TeacherAssignments from '../components/teacher/TeacherAssignments';
 import TeacherStudents from '../components/teacher/TeacherStudents';
 import TeacherGrades from '../components/teacher/TeacherGrades';
+import TeacherProfile from '../components/profile/TeacherProfile';
+import ContactUs from './ContactUs';
 
 // Styled Components
 const DashboardContainer = styled.div`
@@ -585,6 +587,19 @@ editingAssignment={editingAssignment}
 
 case 'students':
 return <TeacherStudents />;
+
+case 'profile':
+return (
+  <TeacherProfile
+    user={user}
+    onUpdate={(updatedUser) => {
+      setUser(updatedUser);
+    }}
+  />
+);
+
+case 'contact':
+return <ContactUs />;
 
 // case 'grades':
 // return <TeacherGrades />; // Commented out for now

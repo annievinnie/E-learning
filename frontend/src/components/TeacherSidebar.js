@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, GraduationCap, LayoutDashboard, Users, BookOpen, FileText, TrendingUp, X } from 'lucide-react';
+import { LogOut, GraduationCap, LayoutDashboard, Users, BookOpen, FileText, TrendingUp, X, User, Mail } from 'lucide-react';
 
 // ------------------ Sidebar Styles ------------------
 const styles = {
@@ -133,6 +133,8 @@ const iconMap = {
   courses: BookOpen,
   assignments: FileText,
   grades: TrendingUp,
+  profile: User,
+  contact: Mail,
 };
 
 // ------------------ Sidebar Component ------------------
@@ -152,6 +154,8 @@ const navItems = [
 { id: 'students', label: 'Students', iconKey: 'students' },
 { id: 'courses', label: 'My Courses', iconKey: 'courses' },
 { id: 'assignments', label: 'Assignments', iconKey: 'assignments' },
+{ id: 'profile', label: 'Profile', iconKey: 'profile' },
+{ id: 'contact', label: 'Contact Us', iconKey: 'contact' },
 // { id: 'grades', label: 'Grades', iconKey: 'grades' }, // Commented out for now
 ];
 
