@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FileText, Video, Users } from 'lucide-react';
+import { BookOpen, FileText, Video } from 'lucide-react';
 import styled from 'styled-components';
 
 const PageTitle = styled.h1`
@@ -79,7 +79,7 @@ const SectionTitle = styled.h3`
   border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1;
 `;
 
-const TeacherDashboardOverview = ({ user, courses, assignments, studentCount = 0 }) => {
+const TeacherDashboardOverview = ({ user, courses, assignments, studentCount = 0, totalRevenue = 0 }) => {
   // Generate recent activities from real data
   const generateRecentActivities = () => {
     const activities = [];
@@ -176,6 +176,11 @@ const TeacherDashboardOverview = ({ user, courses, assignments, studentCount = 0
         <StatCard color1="#667eea" color2="#764ba2">
           <StatTitle>Assignments</StatTitle>
           <StatValue>{assignments.length}</StatValue>
+        </StatCard>
+
+        <StatCard color1="#f093fb" color2="#f5576c">
+          <StatTitle>Total Revenue</StatTitle>
+          <StatValue>${totalRevenue.toFixed(2)}</StatValue>
         </StatCard>
       </StatsGrid>
 

@@ -9,8 +9,8 @@ import TeacherCourses from '../components/teacher/TeacherCourses';
 import TeacherCourseModules from '../components/teacher/TeacherCourseModules';
 import TeacherAssignments from '../components/teacher/TeacherAssignments';
 import TeacherStudents from '../components/teacher/TeacherStudents';
-import TeacherGrades from '../components/teacher/TeacherGrades';
 import TeacherProfile from '../components/profile/TeacherProfile';
+import TeacherPayments from '../components/teacher/TeacherPayments';
 import ContactUs from './ContactUs';
 
 // Styled Components
@@ -126,7 +126,10 @@ const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
 
 // Student count state
 const [studentCount, setStudentCount] = useState(0);
-const [loadingStudentCount, setLoadingStudentCount] = useState(false);
+
+// Payments state
+const [teacherRevenue, setTeacherRevenue] = useState(null);
+const [loadingPayments, setLoadingPayments] = useState(false);
 
 useEffect(() => {
 const token = localStorage.getItem('token');
@@ -141,7 +144,9 @@ API.get('/profile')
 setUser(response.data.user);
 setLoading(false);
 fetchCourses();
+fetchAssignments();
 fetchStudentCount();
+fetchTeacherRevenue();
 })
 .catch(error => {
 console.error('Error fetching profile:', error);
@@ -153,7 +158,9 @@ role: 'teacher'
 });
 setLoading(false);
 fetchCourses();
+fetchAssignments();
 fetchStudentCount();
+fetchTeacherRevenue();
 });
 }, [navigate]);
 
@@ -173,12 +180,14 @@ if (section === 'courses') {
   fetchAssignments();
 } else if (section === 'dashboard') {
   fetchStudentCount();
+  fetchTeacherRevenue();
+} else if (section === 'payments') {
+  fetchTeacherRevenue();
 }
 };
 
 // Fetch student count
 const fetchStudentCount = async () => {
-setLoadingStudentCount(true);
 try {
   const response = await API.get('/courses/students/enrolled');
   if (response.data.success) {
@@ -200,8 +209,6 @@ try {
   }
 } catch (error) {
   console.error('Error fetching student count:', error);
-} finally {
-  setLoadingStudentCount(false);
 }
 };
 
@@ -534,6 +541,36 @@ const handleEditAssignment = (assignment) => {
 setEditingAssignment(assignment);
 };
 
+// Fetch teacher revenue
+const fetchTeacherRevenue = async () => {
+setLoadingPayments(true);
+try {
+  const response = await API.get('/teacher/payments');
+  console.log('Teacher revenue response:', response.data);
+  if (response.data.success) {
+    setTeacherRevenue(response.data.teacher);
+  } else {
+    console.error('Failed to fetch teacher revenue:', response.data);
+    // Don't show alert for dashboard, just log it
+    console.warn('Revenue data not available:', response.data.message);
+    setTeacherRevenue({ totalRevenue: 0, totalStudents: 0, courseCount: 0, courses: [] });
+  }
+} catch (error) {
+  console.error('Error fetching teacher revenue:', error);
+  // Only show alert if explicitly accessing payments section
+  if (activeSection === 'payments') {
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch teacher revenue. Please try again.';
+    alert(`Error: ${errorMessage}`);
+  } else {
+    // For dashboard, just set default values
+    console.warn('Revenue data not available, using defaults');
+    setTeacherRevenue({ totalRevenue: 0, totalStudents: 0, courseCount: 0, courses: [] });
+  }
+} finally {
+  setLoadingPayments(false);
+}
+};
+
 if (loading) {
 return <LoadingSpinner />;
 }
@@ -542,7 +579,7 @@ return <LoadingSpinner />;
 const renderContent = () => {
 switch (activeSection) {
 case 'dashboard':
-return <TeacherDashboardOverview user={user} courses={courses} assignments={assignments} studentCount={studentCount} />;
+return <TeacherDashboardOverview user={user} courses={courses} assignments={assignments} studentCount={studentCount} totalRevenue={teacherRevenue?.totalRevenue || 0} />;
 
 case 'courses':
 return (
@@ -595,6 +632,15 @@ return (
     onUpdate={(updatedUser) => {
       setUser(updatedUser);
     }}
+  />
+);
+
+case 'payments':
+return (
+  <TeacherPayments
+    teacherData={teacherRevenue}
+    loadingPayments={loadingPayments}
+    onRefresh={fetchTeacherRevenue}
   />
 );
 
