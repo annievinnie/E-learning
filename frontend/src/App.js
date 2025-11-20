@@ -14,6 +14,9 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import TeacherApplicationForm from "./components/teacher/TeacherApplicationForm";
 import StudentMyCourses from "./components/student/StudentMyCourses";
+import StudentMerch from "./pages/StudentMerch";
+import MerchOrderSuccess from "./pages/MerchOrderSuccess";
+import MerchOrderCancel from "./pages/MerchOrderCancel";
 import useInactivityLogout from "./hooks/useInactivityLogout";
 
 // Inner component to use the hook inside Router context
@@ -39,6 +42,9 @@ function AppContent() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/teacher-application" element={<TeacherApplicationForm />} />
         <Route path="/my-courses" element={<StudentMyCourses />} />
+        <Route path="/merch" element={<StudentMerch />} />
+        <Route path="/merch/order/success" element={<MerchOrderSuccess />} />
+        <Route path="/merch/order/cancel" element={<MerchOrderCancel />} />
       </Routes>
     </>
   );

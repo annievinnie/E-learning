@@ -8,6 +8,8 @@ import User from "../models/User.js";
 import TeacherApplication from "../models/TeacherApplication.js";
 import Course from "../models/Course.js";
 import Payment from "../models/Payment.js";
+import Order from "../models/Order.js";
+import Merchandise from "../models/Merchandise.js";
 import getCourierClient from "../config/courier.js";
 
 // -------------------- SIGNUP --------------------
@@ -1048,9 +1050,16 @@ export const getDashboardStats = async (req, res) => {
     const totalCourses = await Course.countDocuments({ status: "active" });
     const pendingApplications = await TeacherApplication.countDocuments({ status: "pending" });
     
-    // Calculate total revenue from completed payments
+    // Calculate total revenue from completed course payments
     const completedPayments = await Payment.find({ status: 'completed' });
-    const totalRevenue = completedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const courseRevenue = completedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    
+    // Calculate total revenue from completed merchandise orders
+    const completedOrders = await Order.find({ status: 'completed' });
+    const merchandiseRevenue = completedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    // Combined total revenue
+    const totalRevenue = courseRevenue + merchandiseRevenue;
 
     res.status(200).json({
       success: true,
@@ -1059,7 +1068,9 @@ export const getDashboardStats = async (req, res) => {
         totalTeachers,
         totalCourses,
         pendingApplications,
-        totalRevenue
+        totalRevenue,
+        courseRevenue,
+        merchandiseRevenue
       }
     });
   } catch (error) {
@@ -1387,14 +1398,12 @@ export const getTeacherRevenue = async (req, res) => {
       })
       .populate('student', 'fullName email');
 
-    console.log(`📊 Found ${completedPayments.length} completed payments`);
+    // Logs are now saved to file automatically via console override
 
     // Get all courses for teachers to count students from enrollments
     const allCourses = await Course.find()
       .populate('teacher', 'fullName email')
       .select('title teacher price students');
-
-    console.log(`📚 Found ${allCourses.length} total courses`);
 
     // Calculate revenue per teacher
     const teacherRevenue = await Promise.all(teachers.map(async (teacher) => {
@@ -1428,7 +1437,7 @@ export const getTeacherRevenue = async (req, res) => {
         }
       });
 
-      console.log(`👤 Teacher ${teacher.fullName}: ${teacherCourseList.length} courses, ${totalStudentsFromCourses} students, ${teacherCourses.length} payments, $${totalRevenue.toFixed(2)} revenue`);
+      // Logs are now saved to file automatically
 
       // Group by course - use payments for revenue, but also include courses with students
       const courseRevenue = {};
@@ -1569,6 +1578,308 @@ export const getTeacherRevenue = async (req, res) => {
     });
   } catch (error) {
     console.error("Get teacher revenue error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error. Please try again later." 
+    });
+  }
+};
+
+// Get teacher's own revenue data (Teacher only)
+export const getMyTeacherRevenue = async (req, res) => {
+  try {
+    // Check if user is teacher
+    if (req.user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied. Teacher role required." 
+      });
+    }
+
+    const teacherId = req.user.userId;
+
+    // Get teacher details
+    const teacher = await User.findById(teacherId)
+      .select('fullName email profilePicture');
+
+    if (!teacher) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Teacher not found." 
+      });
+    }
+
+    // Get all completed payments for this teacher's courses
+    const completedPayments = await Payment.find({ status: 'completed' })
+      .populate({
+        path: 'course',
+        select: 'title teacher price',
+        populate: {
+          path: 'teacher',
+          select: 'fullName email'
+        }
+      })
+      .populate('student', 'fullName email');
+
+    // Filter payments for this teacher's courses
+    const teacherCourses = completedPayments.filter(
+      payment => {
+        const courseTeacher = payment.course?.teacher;
+        const teacherIdStr = courseTeacher?._id?.toString() || courseTeacher?.toString();
+        return teacherIdStr === teacherId.toString();
+      }
+    );
+
+    // Get all courses for this teacher
+    const teacherCourseList = await Course.find({ teacher: teacherId })
+      .select('title teacher price students');
+
+    // Calculate total revenue from payments
+    const totalRevenue = teacherCourses.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+    // Count total students from course enrollments
+    let totalStudentsFromCourses = 0;
+    teacherCourseList.forEach(course => {
+      if (course.students && Array.isArray(course.students)) {
+        const studentCount = course.students.length;
+        totalStudentsFromCourses += studentCount;
+      }
+    });
+
+    // Group by course
+    const courseRevenue = {};
+    
+    // First, add courses from payments (for revenue tracking)
+    teacherCourses.forEach(payment => {
+      const courseId = payment.course?._id?.toString();
+      if (courseId) {
+        if (!courseRevenue[courseId]) {
+          courseRevenue[courseId] = {
+            courseId: courseId,
+            courseTitle: payment.course?.title || 'Unknown Course',
+            coursePrice: payment.course?.price || 0,
+            studentCount: 0,
+            revenue: 0,
+            students: []
+          };
+        }
+        courseRevenue[courseId].studentCount += 1;
+        courseRevenue[courseId].revenue += payment.amount || 0;
+        if (payment.student) {
+          courseRevenue[courseId].students.push({
+            id: payment.student._id,
+            name: payment.student.fullName,
+            email: payment.student.email,
+            amount: payment.amount,
+            paidAt: payment.completedAt
+          });
+        }
+      }
+    });
+
+    // Then, add courses with students but no payments
+    for (const course of teacherCourseList) {
+      const courseId = course._id.toString();
+      
+      if (course.students && course.students.length > 0) {
+        const enrolledStudents = [];
+        
+        for (const studentEnrollment of course.students) {
+          let studentId, studentName;
+          
+          if (typeof studentEnrollment === 'object' && studentEnrollment.studentId) {
+            studentId = studentEnrollment.studentId;
+            studentName = studentEnrollment.studentName || 'Unknown Student';
+          } else {
+            studentId = studentEnrollment;
+            studentName = 'Unknown Student';
+          }
+          
+          try {
+            const studentUser = await User.findById(studentId).select('fullName email');
+            if (studentUser) {
+              enrolledStudents.push({
+                id: studentUser._id,
+                name: studentUser.fullName,
+                email: studentUser.email,
+                amount: 0,
+                paidAt: null
+              });
+            } else {
+              enrolledStudents.push({
+                id: studentId,
+                name: studentName,
+                email: 'N/A',
+                amount: 0,
+                paidAt: null
+              });
+            }
+          } catch (err) {
+            console.error(`Error fetching student ${studentId}:`, err);
+            enrolledStudents.push({
+              id: studentId,
+              name: studentName,
+              email: 'N/A',
+              amount: 0,
+              paidAt: null
+            });
+          }
+        }
+        
+        if (!courseRevenue[courseId]) {
+          courseRevenue[courseId] = {
+            courseId: courseId,
+            courseTitle: course.title || 'Unknown Course',
+            coursePrice: course.price || 0,
+            studentCount: enrolledStudents.length,
+            revenue: 0,
+            students: enrolledStudents
+          };
+        } else {
+          const existingStudentIds = new Set(courseRevenue[courseId].students.map(s => s.id.toString()));
+          
+          enrolledStudents.forEach(enrolledStudent => {
+            const enrolledId = enrolledStudent.id.toString();
+            if (!existingStudentIds.has(enrolledId)) {
+              courseRevenue[courseId].students.push(enrolledStudent);
+            }
+          });
+          
+          courseRevenue[courseId].studentCount = courseRevenue[courseId].students.length;
+        }
+      }
+    }
+
+    // Count courses with students
+    const coursesWithStudents = teacherCourseList.filter(course => 
+      course.students && course.students.length > 0
+    ).length;
+
+    const teacherRevenueData = {
+      teacherId: teacher._id,
+      teacherName: teacher.fullName,
+      teacherEmail: teacher.email,
+      profilePicture: teacher.profilePicture,
+      totalRevenue: totalRevenue,
+      totalStudents: totalStudentsFromCourses || teacherCourses.length,
+      courseCount: coursesWithStudents || Object.keys(courseRevenue).length,
+      courses: Object.values(courseRevenue)
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "Teacher revenue data retrieved successfully.",
+      teacher: teacherRevenueData
+    });
+  } catch (error) {
+    console.error("Get my teacher revenue error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error. Please try again later." 
+    });
+  }
+};
+
+// Get all payments (courses + merchandise) for admin
+export const getAllPayments = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied. Admin role required." 
+      });
+    }
+
+    // Get all completed course payments
+    const coursePayments = await Payment.find({ status: 'completed' })
+      .populate({
+        path: 'course',
+        select: 'title teacher price',
+        populate: {
+          path: 'teacher',
+          select: 'fullName email'
+        }
+      })
+      .populate('student', 'fullName email')
+      .sort({ completedAt: -1 });
+
+    // Get all completed merchandise orders
+    const merchandiseOrders = await Order.find({ status: 'completed' })
+      .populate('student', 'fullName email')
+      .populate('items.merchandise', 'name price image')
+      .sort({ completedAt: -1 });
+
+    // Format course payments
+    const formattedCoursePayments = coursePayments.map(payment => ({
+      id: payment._id,
+      type: 'course',
+      student: payment.student ? {
+        id: payment.student._id,
+        name: payment.student.fullName,
+        email: payment.student.email
+      } : null,
+      course: payment.course ? {
+        id: payment.course._id,
+        title: payment.course.title,
+        teacher: payment.course.teacher ? {
+          id: payment.course.teacher._id,
+          name: payment.course.teacher.fullName,
+          email: payment.course.teacher.email
+        } : null,
+        price: payment.course.price
+      } : null,
+      amount: payment.amount,
+      status: payment.status,
+      completedAt: payment.completedAt,
+      createdAt: payment.createdAt
+    }));
+
+    // Format merchandise orders
+    const formattedMerchandiseOrders = merchandiseOrders.map(order => ({
+      id: order._id,
+      type: 'merchandise',
+      student: order.student ? {
+        id: order.student._id,
+        name: order.student.fullName,
+        email: order.student.email
+      } : null,
+      items: order.items.map(item => ({
+        merchandise: item.merchandise ? {
+          id: item.merchandise._id,
+          name: item.merchandise.name,
+          price: item.merchandise.price,
+          image: item.merchandise.image
+        } : { name: item.name, price: item.price },
+        quantity: item.quantity,
+        price: item.price
+      })),
+      totalAmount: order.totalAmount,
+      status: order.status,
+      completedAt: order.completedAt,
+      createdAt: order.createdAt
+    }));
+
+    // Calculate totals
+    const totalCourseRevenue = coursePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalMerchandiseRevenue = merchandiseOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const totalRevenue = totalCourseRevenue + totalMerchandiseRevenue;
+
+    res.status(200).json({
+      success: true,
+      message: "All payments retrieved successfully.",
+      payments: {
+        courses: formattedCoursePayments,
+        merchandise: formattedMerchandiseOrders,
+        totals: {
+          courseRevenue: totalCourseRevenue,
+          merchandiseRevenue: totalMerchandiseRevenue,
+          totalRevenue: totalRevenue
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Get all payments error:", error);
     res.status(500).json({ 
       success: false,
       message: "Server error. Please try again later." 
