@@ -8,7 +8,9 @@ import AdminDashboardOverview from '../components/admin/AdminDashboardOverview';
 import AdminStudents from '../components/admin/AdminStudents';
 import AdminTeachers from '../components/admin/AdminTeachers';
 import AdminCourses from '../components/admin/AdminCourses';
-import AdminPayments from '../components/admin/AdminPayments';
+import AdminAllPayments from '../components/admin/AdminAllPayments';
+import AdminMerchandise from '../components/admin/AdminMerchandise';
+import AdminProfile from '../components/profile/AdminProfile';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -1146,29 +1148,6 @@ const AdminDashboard = () => {
           </div>
         );
 
-      case 'courses':
-        return (
-          <AdminCourses
-            courses={courses}
-            loadingCourses={loadingCourses}
-            selectedTeacher={selectedTeacher}
-            onTeacherSelect={setSelectedTeacher}
-            onRefresh={fetchCourses}
-            onDeleteCourse={handleDeleteCourse}
-          />
-        );
-
-      case 'analytics':
-        return (
-          <div>
-            <PageTitle>Analytics</PageTitle>
-            <SectionCard>
-              <SectionTitle>Analytics & Reporting</SectionTitle>
-              <p style={{ color: '#666', fontSize: '1.1rem' }}>Analytics and reporting features will be implemented here.</p>
-            </SectionCard>
-          </div>
-        );
-
       case 'settings':
         return (
           <div>
@@ -1204,13 +1183,18 @@ const AdminDashboard = () => {
 
       case 'payments':
         return (
-          <AdminPayments
-            teacherRevenue={teacherRevenue}
-            loadingPayments={loadingPayments}
-            selectedTeacherForRevenue={selectedTeacherForRevenue}
-            onTeacherSelect={setSelectedTeacherForRevenue}
-            onShowAllTeachers={() => setSelectedTeacherForRevenue(null)}
-            onRefresh={fetchTeacherRevenue}
+          <AdminAllPayments />
+        );
+      case 'merchandise':
+        return <AdminMerchandise />;
+
+      case 'profile':
+        return (
+          <AdminProfile
+            user={user}
+            onUpdate={(updatedUser) => {
+              setUser(updatedUser);
+            }}
           />
         );
 

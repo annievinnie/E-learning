@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { User, LogOut, GraduationCap } from 'lucide-react';
 import API from '../api';
 import StudentProfile from './profile/StudentProfile';
 import TeacherProfile from './profile/TeacherProfile';
@@ -167,16 +168,23 @@ const Navbar = () => {
     return null;
   }
 
+  // Hide Navbar completely for admin and teacher dashboards
+  if (location.pathname === '/AdminDashboard' || location.pathname === '/TeacherDashboard') {
+    return null;
+  }
+
   // Check if we're on a dashboard page with sidebar (to adjust navbar positioning)
   // StudentDashboard doesn't have a sidebar, so we don't add margin for it
   const isDashboardWithSidebar = location.pathname === '/AdminDashboard' || 
                                   location.pathname === '/TeacherDashboard';
 
   return (
-    <NavbarContainer isDashboard={isDashboardWithSidebar}>
+    <NavbarContainer $isDashboard={isDashboardWithSidebar}>
       <NavbarContent>
         <Logo onClick={handleHome}>
-          <LogoIcon>🎓</LogoIcon>
+          <LogoIcon>
+            <GraduationCap size={36} />
+          </LogoIcon>
           <LogoText>E-Learning</LogoText>
         </Logo>
 
@@ -186,7 +194,7 @@ const Navbar = () => {
             <>
               {/* Hide Home for all logged-in users, but keep Contact Us */}
               {!isLoggedIn && (
-                <NavLink onClick={handleHome} active={location.pathname === '/'}>
+                <NavLink onClick={handleHome} $active={location.pathname === '/'}>
                   Home
                 </NavLink>
               )}
@@ -195,34 +203,45 @@ const Navbar = () => {
           
           {isLoggedIn && (
             <>
-              <NavLink onClick={handleDashboard} active={
+              <NavLink onClick={handleDashboard} $active={
                 location.pathname.includes('/dashboard')
               }>
                 Dashboard
               </NavLink>
               {user?.role === 'student' && (
-                <NavLink 
-                  onClick={() => {
-                    navigate('/my-courses');
-                    setIsMenuOpen(false);
-                  }} 
-                  active={location.pathname === '/my-courses'}
-                >
-                  My Courses
-                </NavLink>
+                <>
+                  <NavLink 
+                    onClick={() => {
+                      navigate('/my-courses');
+                      setIsMenuOpen(false);
+                    }} 
+                    $active={location.pathname === '/my-courses'}
+                  >
+                    My Courses
+                  </NavLink>
+                  <NavLink 
+                    onClick={() => {
+                      navigate('/merch');
+                      setIsMenuOpen(false);
+                    }} 
+                    $active={location.pathname === '/merch'}
+                  >
+                    Merch
+                  </NavLink>
+                </>
               )}
             </>
           )}
           
           {!(isLoggedIn && user?.role === 'admin' && location.pathname === '/AdminDashboard') && (
-            <NavLink onClick={handleContact} active={location.pathname === '/contact'}>
+            <NavLink onClick={handleContact} $active={location.pathname === '/contact'}>
               Contact Us
             </NavLink>
           )}
         </NavLinks>
 
         <UserSection>
-          {isLoggedIn ? (
+          {isLoggedIn && user?.role === 'student' ? (
             <AvatarContainer>
               <UserInfo>
                 <UserDetails>
@@ -253,18 +272,22 @@ const Navbar = () => {
               {showProfileDropdown && (
                 <DropdownMenu ref={dropdownRef} onMouseLeave={() => setShowProfileDropdown(false)}>
                   <DropdownItem onClick={handleProfileClick}>
-                    <DropdownIcon>👤</DropdownIcon>
+                    <DropdownIcon>
+                      <User size={18} />
+                    </DropdownIcon>
                     Profile
                   </DropdownItem>
                   <DropdownDivider />
                   <DropdownItem onClick={handleLogout}>
-                    <DropdownIcon>🚪</DropdownIcon>
+                    <DropdownIcon>
+                      <LogOut size={18} />
+                    </DropdownIcon>
                     Logout
                   </DropdownItem>
                 </DropdownMenu>
               )}
             </AvatarContainer>
-          ) : (
+          ) : !isLoggedIn ? (
             <AuthButtons>
               <LoginButton onClick={handleLogin}>
                 Login
@@ -273,7 +296,7 @@ const Navbar = () => {
                 Sign Up
               </SignupButton>
             </AuthButtons>
-          )}
+          ) : null}
         </UserSection>
 
         {/* Mobile Menu Button */}
@@ -290,7 +313,7 @@ const Navbar = () => {
             <>
               {/* Hide Home for all logged-in users, but keep Contact Us */}
               {!isLoggedIn && (
-                <MobileNavLink onClick={handleHome} active={location.pathname === '/'}>
+                <MobileNavLink onClick={handleHome} $active={location.pathname === '/'}>
                   Home
                 </MobileNavLink>
               )}
@@ -299,7 +322,7 @@ const Navbar = () => {
           
           {isLoggedIn && (
             <>
-              <MobileNavLink onClick={handleDashboard} active={
+              <MobileNavLink onClick={handleDashboard} $active={
                 location.pathname.includes('/dashboard')
               }>
                 Dashboard
@@ -310,7 +333,7 @@ const Navbar = () => {
                     navigate('/my-courses');
                     setIsMenuOpen(false);
                   }} 
-                  active={location.pathname === '/my-courses'}
+                  $active={location.pathname === '/my-courses'}
                 >
                   My Courses
                 </MobileNavLink>
@@ -319,7 +342,7 @@ const Navbar = () => {
           )}
           
           {!(isLoggedIn && user?.role === 'admin' && location.pathname === '/AdminDashboard') && (
-            <MobileNavLink onClick={handleContact} active={location.pathname === '/contact'}>
+            <MobileNavLink onClick={handleContact} $active={location.pathname === '/contact'}>
               Contact Us
             </MobileNavLink>
           )}
@@ -327,14 +350,13 @@ const Navbar = () => {
           {isLoggedIn ? (
             <MobileUserSection>
               <MobileNavLink onClick={handleProfileClick}>
-                👤 Profile
+                <User size={18} style={{ marginRight: '8px' }} />
+                Profile
               </MobileNavLink>
-              <MobileNavLink onClick={handleDashboard}>
-                📊 Dashboard
-              </MobileNavLink>
-              <MobileLogoutButton onClick={handleLogout}>
+              <MobileNavLink onClick={handleLogout} $isLogout={true}>
+                <LogOut size={18} style={{ marginRight: '8px' }} />
                 Logout
-              </MobileLogoutButton>
+              </MobileNavLink>
             </MobileUserSection>
           ) : (
             <MobileAuthButtons>
@@ -384,7 +406,7 @@ const NavbarContainer = styled.nav`
   top: 0;
   z-index: 999;
   position: sticky;
-  margin-left: ${props => props.isDashboard ? '280px' : '0'};
+  margin-left: ${props => props.$isDashboard ? '280px' : '0'};
   transition: margin-left 0.3s ease;
 `;
 
@@ -432,9 +454,9 @@ const NavLinks = styled.div`
 const NavLink = styled.button`
   background: none;
   border: none;
-  color: ${props => props.active ? '#667eea' : '#333'};
+  color: ${props => props.$active ? '#667eea' : '#333'};
   font-size: 1rem;
-  font-weight: ${props => props.active ? '600' : '400'};
+  font-weight: ${props => props.$active ? '600' : '400'};
   cursor: pointer;
   padding: 0.5rem 1rem;
   border-radius: 5px;
@@ -443,10 +465,10 @@ const NavLink = styled.button`
 
   &:hover {
     color: #667eea;
-    background: #f8f9fa;
+    background: #e9ecef;
   }
 
-  ${props => props.active && `
+  ${props => props.$active && `
     &::after {
       content: '';
       position: absolute;
@@ -574,22 +596,79 @@ const DropdownItem = styled.button`
   cursor: pointer;
   font-size: 0.95rem;
   color: #333;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 3px;
+    background: #667eea;
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 
   &:hover {
-    background: #f8f9fa;
+    background: linear-gradient(90deg, #e9ecef 0%, rgba(102, 126, 234, 0.15) 100%);
     color: #667eea;
+    padding-left: 1.5rem;
+    transform: translateX(4px);
+
+    &::before {
+      transform: scaleY(1);
+    }
+
+    span {
+      transform: scale(1.15) rotate(5deg);
+      
+      svg {
+        color: #667eea;
+      }
+    }
   }
 
   &:active {
     background: #e9ecef;
+    transform: translateX(2px);
+  }
+
+  /* Special styling for logout item */
+  &:last-of-type {
+    &:hover {
+      color: #f44336;
+      background: linear-gradient(90deg, #fff5f5 0%, rgba(244, 67, 54, 0.05) 100%);
+      
+      &::before {
+        background: #f44336;
+      }
+
+      span {
+        transform: scale(1.15) translateX(2px);
+        
+        svg {
+          color: #f44336;
+        }
+      }
+    }
   }
 `;
 
 const DropdownIcon = styled.span`
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 24px;
-  text-align: center;
+  height: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #666;
+  
+  svg {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 `;
 
 const DropdownDivider = styled.div`
@@ -753,20 +832,24 @@ const MobileMenu = styled.div`
 `;
 
 const MobileNavLink = styled.button`
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
   background: none;
   border: none;
-  color: ${props => props.active ? '#667eea' : '#333'};
+  color: ${props => {
+    if (props.$isLogout) return '#f44336';
+    return props.$active ? '#667eea' : '#333';
+  }};
   font-size: 1rem;
-  font-weight: ${props => props.active ? '600' : '400'};
+  font-weight: ${props => props.$active ? '600' : '400'};
   cursor: pointer;
   padding: 0.75rem 0;
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
 
   &:hover {
-    color: #667eea;
+    color: ${props => props.$isLogout ? '#d32f2f' : '#667eea'};
   }
 `;
 
@@ -774,57 +857,6 @@ const MobileUserSection = styled.div`
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid #eee;
-`;
-
-const MobileUserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-`;
-
-const MobileUserAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #667eea;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-`;
-
-const MobileUserDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const MobileUserName = styled.span`
-  font-weight: 600;
-  font-size: 0.9rem;
-`;
-
-const MobileUserRole = styled.span`
-  font-size: 0.8rem;
-  color: #666;
-  text-transform: capitalize;
-`;
-
-const MobileLogoutButton = styled.button`
-  width: 100%;
-  background: #ff6b6b;
-  color: white;
-  border: none;
-  padding: 0.75rem;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.3s ease;
-
-  &:hover {
-    background: #ff5252;
-  }
 `;
 
 const MobileAuthButtons = styled.div`
