@@ -1198,6 +1198,16 @@ const AdminDashboard = () => {
           />
         );
 
+      case 'profile':
+        return (
+          <AdminProfile
+            user={user}
+            onUpdate={(updatedUser) => {
+              setUser(updatedUser);
+            }}
+          />
+        );
+
       default:
         return <div>Section not found</div>;
     }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { BookOpen, FileText, Video } from 'lucide-react';
 import styled from 'styled-components';
 
 const PageTitle = styled.h1`
@@ -78,7 +79,80 @@ const SectionTitle = styled.h3`
   border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1;
 `;
 
-const TeacherDashboardOverview = ({ user, courses, assignments }) => {
+const TeacherDashboardOverview = ({ user, courses, assignments, studentCount = 0, totalRevenue = 0 }) => {
+  // Generate recent activities from real data
+  const generateRecentActivities = () => {
+    const activities = [];
+
+    // Get recent courses (last 5, sorted by creation date)
+    const recentCourses = [...courses]
+      .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
+      .slice(0, 2);
+    
+    recentCourses.forEach(course => {
+      const moduleCount = course.modules?.length || 0;
+      const createdAt = course.createdAt ? new Date(course.createdAt) : null;
+      const date = createdAt ? createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+      activities.push({
+        type: 'course',
+        icon: BookOpen,
+        message: `New course created: "${course.title}" - ${moduleCount} ${moduleCount === 1 ? 'module' : 'modules'} added`,
+        date: date,
+        timestamp: createdAt || new Date(0)
+      });
+    });
+
+    // Get recent assignments (last 5, sorted by creation date)
+    const recentAssignments = [...assignments]
+      .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
+      .slice(0, 2);
+    
+    recentAssignments.forEach(assignment => {
+      const createdAt = assignment.createdAt ? new Date(assignment.createdAt) : null;
+      const date = createdAt ? createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+      activities.push({
+        type: 'assignment',
+        icon: FileText,
+        message: `Assignment posted: "${assignment.title}"`,
+        date: date,
+        timestamp: createdAt || new Date(0)
+      });
+    });
+
+    // Get recent modules/videos from courses
+    courses.forEach(course => {
+      if (course.modules && course.modules.length > 0) {
+        const recentModules = course.modules
+          .filter(module => module.video)
+          .slice(-1); // Get the most recent module with video
+        
+        recentModules.forEach(module => {
+          if (module.video) {
+            const date = module.createdAt || course.createdAt;
+            const createdAt = date ? new Date(date) : null;
+            const formattedDate = createdAt ? createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+            activities.push({
+              type: 'video',
+              icon: Video,
+              message: `Video uploaded: "${module.video.title || module.title}" - ${module.video.duration || 'N/A'} duration`,
+              date: formattedDate,
+              timestamp: createdAt || new Date(0)
+            });
+          }
+        });
+      }
+    });
+
+    // Sort all activities by timestamp (most recent first) and take top 4
+    return activities
+      .sort((a, b) => {
+        return b.timestamp - a.timestamp; // Most recent first
+      })
+      .slice(0, 4);
+  };
+
+  const recentActivities = generateRecentActivities();
+
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
@@ -91,7 +165,7 @@ const TeacherDashboardOverview = ({ user, courses, assignments }) => {
       <StatsGrid>
         <StatCard color1="#56ab2f" color2="#a8e063">
           <StatTitle>My Students</StatTitle>
-          <StatValue>24</StatValue>
+          <StatValue>{studentCount}</StatValue>
         </StatCard>
 
         <StatCard color1="#f6d365" color2="#fda085">
@@ -103,25 +177,38 @@ const TeacherDashboardOverview = ({ user, courses, assignments }) => {
           <StatTitle>Assignments</StatTitle>
           <StatValue>{assignments.length}</StatValue>
         </StatCard>
+
+        <StatCard color1="#f093fb" color2="#f5576c">
+          <StatTitle>Total Revenue</StatTitle>
+          <StatValue>${totalRevenue.toFixed(2)}</StatValue>
+        </StatCard>
       </StatsGrid>
 
       {/* Recent Activity */}
       <SectionCard>
         <SectionTitle>Recent Activity</SectionTitle>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            📚 <strong>New course created:</strong> "Cloud Computing Fundamentals" - 2 modules added
+        {recentActivities.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {recentActivities.map((activity, index) => {
+              const IconComponent = activity.icon;
+              return (
+                <div key={index} style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <IconComponent size={18} style={{ color: '#667eea' }} />
+                  <div style={{ flex: 1 }}>
+                    <strong>{activity.message}</strong>
+                    {activity.date !== 'Recently' && (
+                      <span style={{ color: '#666', fontSize: '0.85rem', marginLeft: '0.5rem' }}> - {activity.date}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            📝 <strong>Assignment posted:</strong> "React Component Project" - Due Feb 20, 2024
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+            <p>No recent activity. Start by creating a course or posting an assignment!</p>
           </div>
-          <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            🎥 <strong>Video uploaded:</strong> "What is Cloud Computing?" - 15:30 duration
-          </div>
-          <div style={{ padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            👥 <strong>Student enrolled:</strong> John Doe joined "React Development" course
-          </div>
-        </div>
+        )}
       </SectionCard>
     </div>
   );

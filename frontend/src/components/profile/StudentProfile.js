@@ -18,6 +18,8 @@ const StudentProfile = ({ user, onUpdate }) => {
   });
   const [profilePictureFile, setProfilePictureFile] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState('');
+  const [profilePictureUrl, setProfilePictureUrl] = useState('');
+  const [pictureInputType, setPictureInputType] = useState('file'); // 'file' or 'url'
   const [currentInterest, setCurrentInterest] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadingPicture, setUploadingPicture] = useState(false);
@@ -44,12 +46,16 @@ const StudentProfile = ({ user, onUpdate }) => {
       if (user.profilePicture) {
         if (user.profilePicture.startsWith('http')) {
           setProfilePicturePreview(user.profilePicture);
+          setProfilePictureUrl(user.profilePicture);
+          setPictureInputType('url');
         } else {
           // Local file path - construct full URL
           setProfilePicturePreview(`http://localhost:5000${user.profilePicture}`);
+          setPictureInputType('file');
         }
       } else {
         setProfilePicturePreview('');
+        setProfilePictureUrl('');
       }
     }
   }, [user]);
@@ -96,6 +102,7 @@ const StudentProfile = ({ user, onUpdate }) => {
       }
       
       setProfilePictureFile(file);
+      setProfilePictureUrl(''); // Clear URL when file is selected
       
       // Create preview
       const reader = new FileReader();
@@ -103,6 +110,81 @@ const StudentProfile = ({ user, onUpdate }) => {
         setProfilePicturePreview(reader.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleProfilePictureUrlChange = (e) => {
+    const url = e.target.value;
+    setProfilePictureUrl(url);
+    setProfilePictureFile(null); // Clear file when URL is entered
+    
+    // Validate URL format
+    if (url) {
+      try {
+        new URL(url);
+        setProfilePicturePreview(url);
+        setMessage({ type: '', text: '' });
+      } catch (error) {
+        // Invalid URL, but don't show error until they try to save
+        setProfilePicturePreview('');
+      }
+    } else {
+      setProfilePicturePreview('');
+    }
+  };
+
+  const handleUseUrl = async () => {
+    if (!profilePictureUrl.trim()) {
+      setMessage({ type: 'error', text: 'Please enter a valid image URL.' });
+      return;
+    }
+
+    try {
+      // Validate URL format
+      new URL(profilePictureUrl);
+      
+      // Validate it's an image URL (basic check)
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      const isImageUrl = imageExtensions.some(ext => 
+        profilePictureUrl.toLowerCase().includes(ext)
+      ) || profilePictureUrl.includes('image') || profilePictureUrl.includes('img');
+      
+      if (!isImageUrl) {
+        setMessage({ type: 'error', text: 'Please enter a valid image URL.' });
+        return;
+      }
+
+      setLoading(true);
+      setMessage({ type: '', text: '' });
+
+      // Update profile with URL
+      const response = await API.put('/profile', {
+        ...formData,
+        profilePicture: profilePictureUrl
+      });
+
+      if (response.data.success) {
+        setMessage({ type: 'success', text: 'Profile picture updated successfully!' });
+        setProfilePicturePreview(profilePictureUrl);
+        setFormData(prev => ({
+          ...prev,
+          profilePicture: profilePictureUrl
+        }));
+        if (onUpdate) {
+          onUpdate(response.data.user);
+        }
+      }
+    } catch (error) {
+      if (error instanceof TypeError) {
+        setMessage({ type: 'error', text: 'Please enter a valid URL.' });
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: error.response?.data?.message || 'Failed to update profile picture. Please try again.' 
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -150,7 +232,13 @@ const StudentProfile = ({ user, onUpdate }) => {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await API.put('/profile', formData);
+      // If URL is provided and input type is URL, include it in the update
+      const submitData = { ...formData };
+      if (pictureInputType === 'url' && profilePictureUrl.trim()) {
+        submitData.profilePicture = profilePictureUrl;
+      }
+      
+      const response = await API.put('/profile', submitData);
       if (response.data.success) {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
         if (onUpdate) {
@@ -159,6 +247,10 @@ const StudentProfile = ({ user, onUpdate }) => {
         // Update localStorage
         if (response.data.user.fullName) {
           localStorage.setItem('name', response.data.user.fullName);
+        }
+        // Update preview if URL was used
+        if (pictureInputType === 'url' && profilePictureUrl.trim()) {
+          setProfilePicturePreview(profilePictureUrl);
         }
       }
     } catch (error) {
@@ -481,44 +573,132 @@ const StudentProfile = ({ user, onUpdate }) => {
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
             Profile Picture
           </label>
+          
+          {/* Toggle between File and URL */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setPictureInputType('file');
+                setProfilePictureUrl('');
+                setProfilePictureFile(null);
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: pictureInputType === 'file' ? '#667eea' : '#f5f5f5',
+                color: pictureInputType === 'file' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500'
+              }}
+            >
+              Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPictureInputType('url');
+                setProfilePictureFile(null);
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: pictureInputType === 'url' ? '#667eea' : '#f5f5f5',
+                color: pictureInputType === 'url' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500'
+              }}
+            >
+              Use URL
+            </button>
+          </div>
+
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div style={{ flex: '1', minWidth: '200px' }}>
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                onChange={handleProfilePictureChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                  boxSizing: 'border-box',
-                  marginBottom: '0.5rem'
-                }}
-              />
-              {profilePictureFile && (
-                <button
-                  type="button"
-                  onClick={handleUploadProfilePicture}
-                  disabled={uploadingPicture}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: uploadingPicture ? '#ccc' : '#4caf50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem',
-                    cursor: uploadingPicture ? 'not-allowed' : 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  {uploadingPicture ? 'Uploading...' : 'Upload Picture'}
-                </button>
+              {pictureInputType === 'file' ? (
+                <>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleProfilePictureChange}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box',
+                      marginBottom: '0.5rem'
+                    }}
+                  />
+                  {profilePictureFile && (
+                    <button
+                      type="button"
+                      onClick={handleUploadProfilePicture}
+                      disabled={uploadingPicture}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: uploadingPicture ? '#ccc' : '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem',
+                        cursor: uploadingPicture ? 'not-allowed' : 'pointer',
+                        fontWeight: '500',
+                        marginBottom: '0.5rem'
+                      }}
+                    >
+                      {uploadingPicture ? 'Uploading...' : 'Upload Picture'}
+                    </button>
+                  )}
+                  <small style={{ display: 'block', color: '#666', marginTop: '0.5rem' }}>
+                    Select an image file (JPEG, PNG, GIF, or WebP). Max size: 5MB
+                  </small>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="url"
+                    value={profilePictureUrl}
+                    onChange={handleProfilePictureUrlChange}
+                    placeholder="https://example.com/image.jpg"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box',
+                      marginBottom: '0.5rem'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleUseUrl}
+                    disabled={loading || !profilePictureUrl.trim()}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: (loading || !profilePictureUrl.trim()) ? '#ccc' : '#4caf50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '0.9rem',
+                      cursor: (loading || !profilePictureUrl.trim()) ? 'not-allowed' : 'pointer',
+                      fontWeight: '500',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
+                    {loading ? 'Saving...' : 'Use URL'}
+                  </button>
+                  <small style={{ display: 'block', color: '#666', marginTop: '0.5rem' }}>
+                    Paste a direct link to an image (must be a valid image URL)
+                  </small>
+                </>
               )}
-              <small style={{ display: 'block', color: '#666', marginTop: '0.5rem' }}>
-                Select an image file (JPEG, PNG, GIF, or WebP). Max size: 5MB
-              </small>
             </div>
             {(profilePicturePreview || formData.profilePicture) && (
               <div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const TeacherCourses = ({
   courses,
@@ -11,6 +11,8 @@ const TeacherCourses = ({
   editingCourse
 }) => {
   const [showAddCourseForm, setShowAddCourseForm] = useState(false);
+  const [visibleCoursesCount, setVisibleCoursesCount] = useState(6); // Show 2 rows initially (3 columns x 2 rows = 6)
+  const [cardsPerRow, setCardsPerRow] = useState(3);
   const [courseFormData, setCourseFormData] = useState({
     title: '',
     description: '',
@@ -35,6 +37,28 @@ const TeacherCourses = ({
   const [editCourseFormErrors, setEditCourseFormErrors] = useState({});
   const [isUpdatingCourse, setIsUpdatingCourse] = useState(false);
 
+  // Calculate cards per row based on screen size
+  useEffect(() => {
+    const calculateCardsPerRow = () => {
+      const width = window.innerWidth;
+      // For auto-fit grid with minmax(300px, 1fr), typically shows 2-3 columns
+      if (width >= 900) return 3; // 3 columns
+      if (width >= 600) return 2; // 2 columns
+      return 1; // 1 column
+    };
+
+    const updateCardsPerRow = () => {
+      const newCardsPerRow = calculateCardsPerRow();
+      setCardsPerRow(newCardsPerRow);
+      // Reset visible count to 2 rows when screen size changes
+      setVisibleCoursesCount(newCardsPerRow * 2);
+    };
+
+    updateCardsPerRow();
+    window.addEventListener('resize', updateCardsPerRow);
+    return () => window.removeEventListener('resize', updateCardsPerRow);
+  }, []);
+
   React.useEffect(() => {
     if (editingCourse) {
       setEditCourseFormData({
@@ -51,6 +75,10 @@ const TeacherCourses = ({
       setShowAddCourseForm(false);
     }
   }, [editingCourse]);
+
+  const handleViewMore = () => {
+    setVisibleCoursesCount(prev => prev + cardsPerRow); // Add one more row
+  };
 
   const handleCourseFormChange = (e) => {
     const { name, value, files } = e.target;
@@ -260,7 +288,7 @@ const TeacherCourses = ({
         alignItems: 'center',
         marginBottom: '2rem' 
       }}>
-        <h1 style={{ color: '#2e7d32', fontSize: '2.5rem', marginBottom: '0' }}>
+        <h1 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '2.5rem', marginBottom: '0' }}>
           My Courses
         </h1>
         <button
@@ -303,7 +331,7 @@ const TeacherCourses = ({
           marginBottom: '2rem',
           border: '1px solid #e0e0e0'
         }}>
-          <h3 style={{ color: '#2e7d32', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+          <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
             Create New Course
           </h3>
           
@@ -625,7 +653,7 @@ const TeacherCourses = ({
           marginBottom: '2rem',
           border: '1px solid #e0e0e0'
         }}>
-          <h3 style={{ color: '#2e7d32', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+          <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
             Edit Course
           </h3>
           
@@ -962,7 +990,7 @@ const TeacherCourses = ({
         borderRadius: '8px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       }}>
-        <h3 style={{ color: '#2e7d32', marginBottom: '1rem' }}>
+        <h3 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: '1rem' }}>
           My Courses ({courses.length})
         </h3>
         
@@ -975,107 +1003,228 @@ const TeacherCourses = ({
             <p>No courses found. Create your first course using the button above.</p>
           </div>
         ) : (
+          <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-            {courses.map((course) => (
+            {courses.slice(0, visibleCoursesCount).map((course) => (
               <div key={course._id} style={{
-                padding: '1.5rem',
-                backgroundColor: '#f8f9fa',
+                padding: '0',
+                backgroundColor: 'white',
                 borderRadius: '8px',
                 border: '1px solid #e9ecef',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                flexDirection: 'column'
               }}>
-                {course.thumbnail && (
-                  <div style={{ marginBottom: '1rem' }}>
+                {/* Thumbnail - Top */}
+                <div style={{
+                  width: '100%',
+                  height: '200px',
+                  backgroundColor: '#f0f0f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '8px 8px 0 0',
+                  overflow: 'hidden'
+                }}>
+                  {course.thumbnail ? (
                     <img 
                       src={course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`} 
                       alt={course.title}
                       style={{
                         width: '100%',
-                        height: '150px',
-                        objectFit: 'cover',
-                        borderRadius: '8px',
-                        border: '1px solid #e0e0e0'
+                        height: '100%',
+                        objectFit: 'cover'
                       }}
                       onError={(e) => {
                         e.target.style.display = 'none';
+                        e.target.parentElement.textContent = 'Thumbnail';
                       }}
                     />
+                  ) : (
+                    <span style={{ color: '#999', fontSize: '1rem', fontWeight: 'bold' }}>Thumbnail</span>
+                  )}
+                </div>
+
+                {/* Title - Below Thumbnail */}
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: 'white',
+                  textAlign: 'center',
+                  borderBottom: '1px solid #e9ecef'
+                }}>
+                  <h4 style={{ 
+                    color: '#333', 
+                    margin: 0, 
+                    fontSize: '1.2rem', 
+                    fontWeight: 'bold'
+                  }}>
+                    {course.title || 'Title'}
+                  </h4>
+                </div>
+
+                {/* Details - Below Title */}
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: 'white',
+                  fontSize: '0.85rem',
+                  color: '#666',
+                  lineHeight: '1.6'
+                }}>
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>{course.description || 'Mern stack'}</strong>
+                  </div>
+                  <div style={{ marginBottom: '0.25rem' }}>
+                    Duration: {course.duration || '14:25:36'}
+                  </div>
+                  <div style={{ marginBottom: '0.25rem' }}>
+                    Level: {course.level || 'intermediate'}
+                  </div>
+                  <div>
+                    Students: {course.students?.length || 0} | Status: {course.status || 'active'}
+                  </div>
+                </div>
+
+                {/* Category Badge - Below Details */}
+                {course.category && (
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    textAlign: 'center',
+                    borderTop: '1px solid #e9ecef',
+                    borderBottom: '1px solid #e9ecef'
+                  }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2196f3',
+                      color: 'white',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      fontWeight: '500'
+                    }}>
+                      {course.category}
+                    </span>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ color: '#2e7d32', margin: 0, fontSize: '1.2rem', marginBottom: '0.5rem' }}>{course.title}</h4>
-                    {course.category && (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: '#2196f3',
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                        marginBottom: '0.5rem'
-                      }}>
-                        {course.category}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => onViewModules(course)}
-                      style={{
-                        backgroundColor: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      Manage Modules
-                    </button>
-                    <button
-                      onClick={() => handleEditClick(course)}
-                      style={{
-                        backgroundColor: '#2196f3',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDeleteCourse(course._id)}
-                      style={{
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                <p style={{ color: '#666', marginBottom: '0.5rem', fontSize: '0.9rem' }}>{course.description}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#666' }}>
-                  <span>Duration: {course.duration}</span>
-                  <span>Level: {course.level}</span>
-                </div>
-                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
-                  Students: {course.students?.length || 0} | Status: {course.status}
+
+                {/* Action Buttons - Bottom */}
+                <div style={{
+                  padding: '1rem',
+                  display: 'flex',
+                  gap: '0.5rem',
+                  justifyContent: 'center',
+                  backgroundColor: 'white',
+                  borderRadius: '0 0 8px 8px'
+                }}>
+                  <button
+                    onClick={() => onViewModules(course)}
+                    style={{
+                      backgroundColor: '#4caf50',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                      flex: 1,
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#45a049';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#4caf50';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    Manage Modules
+                  </button>
+                  <button
+                    onClick={() => handleEditClick(course)}
+                    style={{
+                      backgroundColor: '#2196f3',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                      flex: 1,
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#1976d2';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#2196f3';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => onDeleteCourse(course._id)}
+                    style={{
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                      flex: 1,
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#d32f2f';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#f44336';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+          {courses.length > visibleCoursesCount && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+              <button
+                onClick={handleViewMore}
+                style={{
+                  padding: '0.75rem 2rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+                }}
+              >
+                View More
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

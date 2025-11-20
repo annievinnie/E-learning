@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Download } from 'lucide-react';
+import { X, Download, GraduationCap } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import logoImage from '../../logo.png';
@@ -248,7 +248,8 @@ const CourseCertificate = ({ course, studentName, onClose }) => {
                   display: 'none'
                 }}
               >
-                🎓 E-LEARNING
+                <GraduationCap size={20} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                E-LEARNING
               </div>
             </div>
             <div
