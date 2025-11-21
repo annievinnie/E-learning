@@ -11,6 +11,7 @@ import TeacherAssignments from '../components/teacher/TeacherAssignments';
 import TeacherStudents from '../components/teacher/TeacherStudents';
 import TeacherProfile from '../components/profile/TeacherProfile';
 import TeacherPayments from '../components/teacher/TeacherPayments';
+import TeacherQnA from '../components/teacher/TeacherQnA';
 import ContactUs from './ContactUs';
 
 // Styled Components
@@ -355,11 +356,19 @@ const formData = new FormData();
 formData.append('title', moduleData.title);
 formData.append('description', moduleData.description);
 formData.append('order', moduleData.order || (selectedCourse.modules ? selectedCourse.modules.length + 1 : 1));
-if (moduleData.videoFile) {
-formData.append('video', moduleData.videoFile);
+formData.append('moduleType', moduleData.moduleType || 'video');
+
+if (moduleData.moduleType === 'mcq') {
+  // For MCQ modules, send questions as JSON
+  formData.append('mcqQuestions', JSON.stringify(moduleData.mcqQuestions || []));
+} else {
+  // For video modules, send video file
+  if (moduleData.videoFile) {
+    formData.append('video', moduleData.videoFile);
+  }
+  // Duration is automatically calculated, always include it
+  formData.append('duration', moduleData.duration || '0:00');
 }
-// Duration is automatically calculated, always include it
-formData.append('duration', moduleData.duration || '0:00');
 
 const response = await API.post(`/courses/${selectedCourse._id}/modules`, formData, {
 headers: {
@@ -375,7 +384,8 @@ course._id === selectedCourse._id ? updatedCourse : course
 ));
 
 console.log('✅ Module created:', updatedCourse);
-alert('Module with video created successfully!');
+const moduleTypeText = moduleData.moduleType === 'mcq' ? 'MCQ quiz' : 'video';
+alert(`Module with ${moduleTypeText} created successfully!`);
 // Refresh courses for recent activity if on dashboard
 if (activeSection === 'dashboard') {
   fetchCourses();
@@ -621,6 +631,9 @@ onEditAssignment={handleEditAssignment}
 editingAssignment={editingAssignment}
 />
 );
+
+case 'qna':
+return <TeacherQnA />;
 
 case 'students':
 return <TeacherStudents />;

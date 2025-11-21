@@ -371,7 +371,7 @@ const CourseDetailPage = () => {
           {activeTab === "overview" && <CourseOverview course={course} />}
           {activeTab === "curriculum" && <CourseCurriculum course={course} isEnrolled={isEnrolled} />}
           {activeTab === "assignment" && <CourseAssignments courseId={id} isEnrolled={isEnrolled} />}
-          {activeTab === "qna" && <CourseQnA course={course} isEnrolled={isEnrolled} />}
+          {activeTab === "qna" && <CourseQnA course={course} courseId={id} isEnrolled={isEnrolled} />}
         </div>
       </div>
 
