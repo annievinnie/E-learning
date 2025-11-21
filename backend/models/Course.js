@@ -34,6 +34,31 @@ const videoSchema = new mongoose.Schema({
   }
 });
 
+const mcqOptionSchema = new mongoose.Schema({
+  text: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  isCorrect: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const mcqQuestionSchema = new mongoose.Schema({
+  question: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  options: [mcqOptionSchema],
+  explanation: {
+    type: String,
+    default: ''
+  }
+});
+
 const moduleSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -50,9 +75,18 @@ const moduleSchema = new mongoose.Schema({
     required: true,
     default: 1
   },
+  moduleType: {
+    type: String,
+    enum: ['video', 'mcq'],
+    default: 'video'
+  },
   video: {
     type: videoSchema,
     default: null
+  },
+  mcqQuestions: {
+    type: [mcqQuestionSchema],
+    default: []
   },
   createdAt: {
     type: Date,
