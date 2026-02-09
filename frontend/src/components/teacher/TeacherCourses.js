@@ -915,7 +915,7 @@ const TeacherCourses = ({
                 <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
                   <div style={{ marginBottom: '0.5rem' }}>Current thumbnail:</div>
                   <img 
-                    src={editingCourse.thumbnail.startsWith('http') ? editingCourse.thumbnail : `http://localhost:5000${editingCourse.thumbnail}`} 
+                    src={editingCourse.thumbnail.startsWith('http') ? editingCourse.thumbnail : `${process.env.REACT_APP_API_URL}${editingCourse.thumbnail}`} 
                     alt="Current thumbnail" 
                     style={{ 
                       maxWidth: '200px', 
@@ -1028,7 +1028,7 @@ const TeacherCourses = ({
                 }}>
                   {course.thumbnail ? (
                     <img 
-                      src={course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`} 
+                      src={course.thumbnail.startsWith('http') ? course.thumbnail : `https://e-learning-rqdx.onrender.com${course.thumbnail}`} 
                       alt={course.title}
                       style={{
                         width: '100%',

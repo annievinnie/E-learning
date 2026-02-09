@@ -451,7 +451,7 @@ const AdminMerchandise = () => {
                         <img
                           src={item.image.startsWith('http') 
                             ? item.image 
-                            : `http://localhost:5000${item.image}`}
+                            : `${process.env.REACT_APP_API_URL}${item.image}`}
                           alt={item.name}
                           style={{
                             width: '60px',

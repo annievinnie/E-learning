@@ -258,7 +258,7 @@ const Navbar = () => {
                     <AvatarImage 
                       src={user.profilePicture.startsWith('http') 
                         ? user.profilePicture 
-                        : `http://localhost:5000${user.profilePicture}`} 
+                        : `${process.env.REACT_APP_API_URL}${user.profilePicture}`} 
                       alt={user?.fullName} 
                     />
                   ) : (

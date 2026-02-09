@@ -50,7 +50,7 @@ const StudentProfile = ({ user, onUpdate }) => {
           setPictureInputType('url');
         } else {
           // Local file path - construct full URL
-          setProfilePicturePreview(`http://localhost:5000${user.profilePicture}`);
+          setProfilePicturePreview(`${user.profilePicture}`);
           setPictureInputType('file');
         }
       } else {
@@ -705,7 +705,7 @@ const StudentProfile = ({ user, onUpdate }) => {
                 <img
                   src={profilePicturePreview || (formData.profilePicture?.startsWith('http') 
                     ? formData.profilePicture 
-                    : `http://localhost:5000${formData.profilePicture}`)}
+                    : `${process.env.REACT_APP_API_URL}${formData.profilePicture}`)}
                   alt="Profile preview"
                   style={{
                     width: '150px',

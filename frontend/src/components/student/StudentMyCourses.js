@@ -181,7 +181,7 @@ const StudentMyCourses = () => {
               const instructorImage = course.teacher?.profilePicture 
                 ? (course.teacher.profilePicture.startsWith('http') 
                     ? course.teacher.profilePicture 
-                    : `http://localhost:5000${course.teacher.profilePicture}`)
+                    : `${process.env.REACT_APP_API_URL}${course.teacher.profilePicture}`)
                 : '';
               
               // Get progress from course object (included in API response)
@@ -201,7 +201,7 @@ const StudentMyCourses = () => {
                   <div className="relative overflow-hidden h-48 bg-gradient-to-br from-indigo-400 to-purple-500 flex-shrink-0">
                     {course.thumbnail ? (
                       <img
-                        src={course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`}
+                        src={course.thumbnail.startsWith('http') ? course.thumbnail : `https://e-learning-rqdx.onrender.com${course.thumbnail}`}
                         alt={course.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={(e) => {
