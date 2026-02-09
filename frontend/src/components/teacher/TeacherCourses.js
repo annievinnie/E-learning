@@ -1028,7 +1028,7 @@ const TeacherCourses = ({
                 }}>
                   {course.thumbnail ? (
                     <img 
-                      src={course.thumbnail.startsWith('http') ? course.thumbnail : `https://e-learning-rqdx.onrender.com${course.thumbnail}`} 
+                      src={course.thumbnail.startsWith('http') ? course.thumbnail : `${process.env.REACT_APP_API_URL}${course.thumbnail}`} 
                       alt={course.title}
                       style={{
                         width: '100%',

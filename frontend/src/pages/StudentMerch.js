@@ -394,7 +394,7 @@ const StudentMerch = () => {
   const getImageUrl = (image) => {
     if (!image) return null;
     if (image.startsWith('http')) return image;
-    return `http://localhost:5000${image}`;
+    return `${process.env.REACT_APP_API_URL}${image}`;
   };
 
   // Filter merchandise by category
