@@ -197,7 +197,7 @@ const VideoPlayer = ({ video, onClose, isEnrolled, allVideos, currentVideoIndex,
   const getVideoUrl = () => {
     if (!video || !video.videoPath) return '';
     if (video.videoPath.startsWith('http')) return video.videoPath;
-    return `http://localhost:5000${video.videoPath}`;
+    return `${process.env.REACT_APP_API_URL}${video.videoPath}`;
   };
 
   if (!isEnrolled) {

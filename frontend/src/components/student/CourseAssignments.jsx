@@ -49,7 +49,7 @@ const CourseAssignments = ({ courseId, isEnrolled }) => {
     // If it's already a full URL, return as is
     if (fileUrl.startsWith('http')) return fileUrl;
     // Otherwise, prepend the backend URL
-    return `http://localhost:5000${fileUrl}`;
+    return `${process.env.REACT_APP_API_URL}${fileUrl}`;
   };
 
   const handleViewPDF = (fileUrl) => {

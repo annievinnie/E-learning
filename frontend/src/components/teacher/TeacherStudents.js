@@ -338,7 +338,7 @@ const TeacherStudents = () => {
                               <img
                                 src={student.profilePicture.startsWith('http') 
                                   ? student.profilePicture 
-                                  : `http://localhost:5000${student.profilePicture.startsWith('/') ? '' : '/'}${student.profilePicture}`}
+                                  : `${process.env.REACT_APP_API_URL}${student.profilePicture.startsWith('/') ? '' : '/'}${student.profilePicture}`}
                                 alt={student.studentName}
                                 style={{
                                   width: '100%',
