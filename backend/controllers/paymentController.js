@@ -131,15 +131,16 @@ export const createCheckoutSession = async (req, res) => {
     let thumbnailImages = [];
     if (course.thumbnail) {
       let thumbnailUrl = course.thumbnail;
+      const backendBaseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
       
       // Convert relative paths to full URLs
       if (thumbnailUrl && !thumbnailUrl.startsWith('http://') && !thumbnailUrl.startsWith('https://')) {
         // If it's a relative path, make it a full URL
         if (thumbnailUrl.startsWith('/')) {
-          thumbnailUrl = `http://localhost:5000${thumbnailUrl}`;
+          thumbnailUrl = `${backendBaseUrl}${thumbnailUrl}`;
         } else {
           // If it doesn't start with /, it might be just a filename
-          thumbnailUrl = `http://localhost:5000/${thumbnailUrl}`;
+          thumbnailUrl = `${backendBaseUrl}/${thumbnailUrl}`;
         }
       }
       

@@ -100,7 +100,7 @@ export const getAllCourses = async (req, res) => {
       if (course.teacher?.profilePicture) {
         instructorImage = course.teacher.profilePicture.startsWith('http') 
           ? course.teacher.profilePicture 
-          : `http://localhost:5000${course.teacher.profilePicture}`;
+          : `${process.env.BACKEND_URL || 'http://localhost:5000'}${course.teacher.profilePicture}`;
       }
       
       return {
@@ -109,7 +109,11 @@ export const getAllCourses = async (req, res) => {
         description: course.description,
         instructor: course.teacher?.fullName || 'Unknown',
         instructorImage: instructorImage,
-        thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
+        thumbnail: course.thumbnail
+          ? (course.thumbnail.startsWith('http')
+            ? course.thumbnail
+            : `${process.env.BACKEND_URL || 'http://localhost:5000'}${course.thumbnail}`)
+          : '',
       category: course.category || 'Other',
       level: course.level.charAt(0).toUpperCase() + course.level.slice(1),
       rating: 4.5, // Can be added as reviews/ratings later
@@ -184,7 +188,7 @@ export const getCourseDetails = async (req, res) => {
     if (course.teacher?.profilePicture) {
       instructorImage = course.teacher.profilePicture.startsWith('http') 
         ? course.teacher.profilePicture 
-        : `http://localhost:5000${course.teacher.profilePicture}`;
+        : `${process.env.BACKEND_URL || 'http://localhost:5000'}${course.teacher.profilePicture}`;
     }
     
     const formattedCourse = {
@@ -194,7 +198,11 @@ export const getCourseDetails = async (req, res) => {
       instructor: course.teacher?.fullName || 'Unknown',
       instructorImage: instructorImage,
       instructorEmail: course.teacher?.email || '',
-      thumbnail: course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : '',
+      thumbnail: course.thumbnail
+        ? (course.thumbnail.startsWith('http')
+          ? course.thumbnail
+          : `${process.env.BACKEND_URL || 'http://localhost:5000'}${course.thumbnail}`)
+        : '',
       category: course.category || 'Other',
       level: course.level.charAt(0).toUpperCase() + course.level.slice(1),
       rating: 4.5, // Can be added as reviews/ratings later
