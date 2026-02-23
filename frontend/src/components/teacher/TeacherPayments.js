@@ -245,7 +245,7 @@ const TeacherPayments = ({ teacherData, loadingPayments, onRefresh }) => {
             <img
               src={teacherData.profilePicture.startsWith('http') 
                 ? teacherData.profilePicture 
-                : `http://localhost:5001${teacherData.profilePicture}`}
+                : `${process.env.REACT_APP_API_URL}${teacherData.profilePicture}`}
               alt={teacherData.teacherName}
               style={{
                 width: '60px',

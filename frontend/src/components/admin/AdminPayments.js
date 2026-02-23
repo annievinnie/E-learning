@@ -74,7 +74,7 @@ const AdminPayments = ({
                             <img
                               src={teacher.profilePicture.startsWith('http') 
                                 ? teacher.profilePicture 
-                                : `http://localhost:5001${teacher.profilePicture}`}
+                                : `${process.env.REACT_APP_API_URL}${teacher.profilePicture}`}
                               alt={teacher.teacherName}
                               style={{
                                 width: '40px',
@@ -211,7 +211,7 @@ const AdminPayments = ({
                 <img
                   src={selectedTeacherData.profilePicture.startsWith('http') 
                     ? selectedTeacherData.profilePicture 
-                    : `http://localhost:5001${selectedTeacherData.profilePicture}`}
+                    : `${process.env.REACT_APP_API_URL}${selectedTeacherData.profilePicture}`}
                   alt={selectedTeacherData.teacherName}
                   style={{
                     width: '60px',
