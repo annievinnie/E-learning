@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Lock } from 'lucide-react';
+import { Play, Lock, FileText } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
+import McqQuiz from './McqQuiz';
 
 const CourseCurriculum = ({ course, isEnrolled }) => {
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedMcqModule, setSelectedMcqModule] = useState(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
 
   // Get all videos from modules
@@ -15,7 +17,14 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
     : [];
 
   const handleModuleClick = (module, index) => {
-    if (module.video) {
+    if (!isEnrolled) {
+      alert('Please enroll in this course to access the modules.');
+      return;
+    }
+
+    if (module.moduleType === 'mcq' && module.mcqQuestions) {
+      setSelectedMcqModule(module);
+    } else if (module.video) {
       // Find the index of this video in the sorted videos array
       const sortedModules = [...course.modules]
         .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -76,7 +85,7 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
     <div>
       <h4>Course Curriculum</h4>
       <p className="text-muted mb-4">
-        {course.modules?.length || 0} modules • {course.modules?.reduce((total, module) => total + (module.video ? 1 : 0), 0) || 0} videos
+        {course.modules?.length || 0} modules • {course.modules?.reduce((total, module) => total + (module.video ? 1 : 0), 0) || 0} videos • {course.modules?.reduce((total, module) => total + (module.moduleType === 'mcq' ? 1 : 0), 0) || 0} quizzes
       </p>
       
       {selectedVideo && (
@@ -92,6 +101,13 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
           moduleId={selectedVideo.moduleId}
         />
       )}
+
+      {selectedMcqModule && (
+        <McqQuiz
+          module={selectedMcqModule}
+          onClose={() => setSelectedMcqModule(null)}
+        />
+      )}
       
       {course.modules && course.modules.length > 0 ? (
         <div>
@@ -102,7 +118,7 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
               key={module._id || module.id || index}
               className="mb-2 border rounded"
               style={{
-                cursor: module.video ? 'pointer' : 'default',
+                cursor: (module.video || (module.moduleType === 'mcq' && module.mcqQuestions)) ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
                 backgroundColor: 'white',
                 position: 'relative',
@@ -110,7 +126,7 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
               }}
               onClick={() => handleModuleClick(module, index)}
               onMouseEnter={(e) => {
-                if (module.video) {
+                if (module.video || (module.moduleType === 'mcq' && module.mcqQuestions)) {
                   const overlay = e.currentTarget.querySelector('.hover-overlay');
                   if (overlay) {
                     overlay.style.opacity = '1';
@@ -119,7 +135,7 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
                 }
               }}
               onMouseLeave={(e) => {
-                if (module.video) {
+                if (module.video || (module.moduleType === 'mcq' && module.mcqQuestions)) {
                   const overlay = e.currentTarget.querySelector('.hover-overlay');
                   if (overlay) {
                     overlay.style.opacity = '0';
@@ -131,10 +147,22 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
               <div className="p-3">
                 <div className="d-flex justify-content-between align-items-center">
                   <div className="flex-grow-1">
-                    <strong style={{ fontSize: '1.1rem' }}>
-                      {index + 1}. {module.title}
-                    </strong>
+                    <div className="d-flex align-items-center gap-2 mb-1">
+                      <strong style={{ fontSize: '1.1rem' }}>
+                        {index + 1}. {module.title}
+                      </strong>
+                      {module.moduleType === 'mcq' && (
+                        <span className="badge" style={{ backgroundColor: '#ff9800', color: 'white', fontSize: '0.75rem' }}>
+                          📝 MCQ Quiz
+                        </span>
+                      )}
+                    </div>
                     <p className="mb-0 text-muted small mt-1">{module.description}</p>
+                    {module.moduleType === 'mcq' && module.mcqQuestions && (
+                      <p className="mb-0 text-muted small mt-1">
+                        {module.mcqQuestions.length} question{module.mcqQuestions.length !== 1 ? 's' : ''}
+                      </p>
+                    )}
                   </div>
                   {module.video?.duration && (
                     <span className="text-muted small ms-3">
@@ -144,8 +172,8 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
                 </div>
               </div>
               
-              {/* Hover Overlay with Play/Lock Icon */}
-              {module.video && (
+              {/* Hover Overlay with Play/Quiz Icon */}
+              {(module.video || (module.moduleType === 'mcq' && module.mcqQuestions)) && (
                 <div
                   className="hover-overlay d-flex align-items-center justify-content-center"
                   style={{
@@ -174,7 +202,11 @@ const CourseCurriculum = ({ course, isEnrolled }) => {
                     }}
                   >
                     {isEnrolled ? (
-                      <Play size={24} fill="#2196f3" color="#2196f3" />
+                      module.moduleType === 'mcq' ? (
+                        <FileText size={24} fill="#ff9800" color="#ff9800" />
+                      ) : (
+                        <Play size={24} fill="#2196f3" color="#2196f3" />
+                      )
                     ) : (
                       <Lock size={24} fill="#f44336" color="#f44336" />
                     )}

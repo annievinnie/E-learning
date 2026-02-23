@@ -235,11 +235,11 @@ export const deleteCourse = async (req, res) => {
   }
 };
 
-// Add a module to a course (with video upload)
+// Add a module to a course (with video upload or MCQ)
 export const addModuleToCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, order, duration } = req.body;
+    const { title, description, order, duration, moduleType, mcqQuestions } = req.body;
     const teacherId = req.user.userId || req.user.id;
     const videoFile = req.file;
 
@@ -259,12 +259,49 @@ export const addModuleToCourse = async (req, res) => {
       });
     }
 
-    // Video file is required
-    if (!videoFile) {
-      return res.status(400).json({
-        success: false,
-        message: 'Video file is required for module creation.'
-      });
+    const moduleTypeValue = moduleType || 'video';
+
+    // Validate based on module type
+    if (moduleTypeValue === 'video') {
+      // Video file is required for video modules
+      if (!videoFile) {
+        return res.status(400).json({
+          success: false,
+          message: 'Video file is required for video module creation.'
+        });
+      }
+    } else if (moduleTypeValue === 'mcq') {
+      // MCQ questions are required for MCQ modules
+      let parsedMcqQuestions = [];
+      try {
+        parsedMcqQuestions = typeof mcqQuestions === 'string' ? JSON.parse(mcqQuestions) : mcqQuestions;
+      } catch (e) {
+        parsedMcqQuestions = [];
+      }
+
+      if (!parsedMcqQuestions || parsedMcqQuestions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one MCQ question is required for MCQ module creation.'
+        });
+      }
+
+      // Validate each MCQ question
+      for (const q of parsedMcqQuestions) {
+        if (!q.question || !q.options || q.options.length < 2) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each MCQ question must have a question text and at least 2 options.'
+          });
+        }
+        const correctOptions = q.options.filter(opt => opt.isCorrect);
+        if (correctOptions.length !== 1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each MCQ question must have exactly one correct answer.'
+          });
+        }
+      }
     }
 
     const course = await Course.findOne({ 
@@ -287,17 +324,6 @@ export const addModuleToCourse = async (req, res) => {
       });
     }
 
-    // Build video data
-    const videoData = {
-      title: title, // Use module title as video title
-      description: description, // Use module description as video description
-      videoPath: `/uploads/videos/${videoFile.filename}`,
-      videoUrl: '',
-      duration: duration || '0:00',
-      order: 1,
-      uploadedAt: new Date()
-    };
-
     // Calculate the correct order number
     // Sort existing modules by order and get the highest order number
     const sortedModules = [...course.modules].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -305,12 +331,36 @@ export const addModuleToCourse = async (req, res) => {
       ? Math.max(...sortedModules.map(m => m.order || 0)) + 1 
       : 1;
 
+    // Build module data based on type
     const newModule = {
       title,
       description,
       order: order || nextOrder,
-      video: videoData
+      moduleType: moduleTypeValue
     };
+
+    if (moduleTypeValue === 'video') {
+      // Build video data
+      const videoData = {
+        title: title, // Use module title as video title
+        description: description, // Use module description as video description
+        videoPath: `/uploads/videos/${videoFile.filename}`,
+        videoUrl: '',
+        duration: duration || '0:00',
+        order: 1,
+        uploadedAt: new Date()
+      };
+      newModule.video = videoData;
+    } else if (moduleTypeValue === 'mcq') {
+      // Parse and set MCQ questions
+      let parsedMcqQuestions = [];
+      try {
+        parsedMcqQuestions = typeof mcqQuestions === 'string' ? JSON.parse(mcqQuestions) : mcqQuestions;
+      } catch (e) {
+        parsedMcqQuestions = [];
+      }
+      newModule.mcqQuestions = parsedMcqQuestions;
+    }
 
     course.modules.push(newModule);
     await course.save();

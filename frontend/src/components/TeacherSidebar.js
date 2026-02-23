@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, GraduationCap, LayoutDashboard, Users, BookOpen, FileText, TrendingUp, X, User, Mail, DollarSign } from 'lucide-react';
+import { LogOut, GraduationCap, LayoutDashboard, Users, BookOpen, FileText, TrendingUp, X, User, Mail, DollarSign, MessageSquare } from 'lucide-react';
 
 // ------------------ Sidebar Styles ------------------
 const styles = {
@@ -132,6 +132,7 @@ const iconMap = {
   students: Users,
   courses: BookOpen,
   assignments: FileText,
+  qna: MessageSquare,
   payments: DollarSign,
   grades: TrendingUp,
   profile: User,
@@ -151,14 +152,15 @@ return () => window.removeEventListener('resize', handleResize);
 }, []);
 
 const navItems = [
-{ id: 'dashboard', label: 'Dashboard', iconKey: 'dashboard' },
-{ id: 'students', label: 'Students', iconKey: 'students' },
-{ id: 'courses', label: 'My Courses', iconKey: 'courses' },
-{ id: 'assignments', label: 'Assignments', iconKey: 'assignments' },
-{ id: 'payments', label: 'Payments', iconKey: 'payments' },
-{ id: 'profile', label: 'Profile', iconKey: 'profile' },
-{ id: 'contact', label: 'Contact Us', iconKey: 'contact' },
-// { id: 'grades', label: 'Grades', iconKey: 'grades' }, // Commented out for now
+  { id: 'dashboard', label: 'Dashboard', iconKey: 'dashboard' },
+  { id: 'students', label: 'Students', iconKey: 'students' },
+  { id: 'courses', label: 'My Courses', iconKey: 'courses' },
+  { id: 'assignments', label: 'Assignments', iconKey: 'assignments' },
+  { id: 'qna', label: 'Q & A', iconKey: 'qna' },
+  { id: 'payments', label: 'Payments', iconKey: 'payments' },
+  { id: 'profile', label: 'Profile', iconKey: 'profile' },
+  { id: 'contact', label: 'Contact Us', iconKey: 'contact' },
+  // { id: 'grades', label: 'Grades', iconKey: 'grades' }, // Commented out for now
 ];
 
 const handleNavClick = (sectionId) => {
